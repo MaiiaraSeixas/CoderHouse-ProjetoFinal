@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "title": "Notebook Gamer",
+    "description": "Notebook com RTX 3060",
+    "code": "NTB-GM01",
+    "price": 7000,
+    "status": true,
+    "stock": 10,
+    "category": "eletrônicos",
+    "thumbnails": []
+  },
+  {
+    "id": 2,
+    "title": "Notebook Gamer",
+    "description": "Notebook com RTX 4060",
+    "code": "NTB-4060",
+    "price": 8000,
+    "status": true,
+    "stock": 15,
+    "category": "eletrônicos",
+    "thumbnails": []
+  },
+  {
+    "id": 3,
+    "title": "Smartphone Pro",
+    "description": "256GB, 8GB RAM",
+    "code": "SM-PRO23",
+    "price": 3500,
+    "status": true,
+    "stock": 20,
+    "category": "celulares",
+    "thumbnails": []
+  },
+  {
+    "id": 4,
+    "title": "Headset Gamer",
+    "description": "7.1 Surround Sound",
+    "code": "HS-GM01",
+    "price": 600,
+    "status": true,
+    "stock": 30,
+    "category": "acessórios",
+    "thumbnails": []
+  }
+]
