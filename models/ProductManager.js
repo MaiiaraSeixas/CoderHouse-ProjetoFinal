@@ -6,7 +6,8 @@ class ProductManager {
 	#nextId = 1;
 
 	constructor() { // Alterado para nome fixo
-		this.filePath = path.join(__dirname, 'produtos.json');
+		this.filePath = path.join( __dirname, '../data/produtos.json');
+
 		this.#products = [];
 	}
 
@@ -35,9 +36,9 @@ class ProductManager {
 		}
 	}
 	async addProduct(productData) {
-      
-    // Desestruture os dados para continuar com a criação do produto
-    const { title, description, code, price, stock, category, thumbnails } = productData;
+
+		// Desestruture os dados para continuar com a criação do produto
+		const { title, description, code, price, stock, category, thumbnails } = productData;
 
 		// Validação de tipos numéricos (Novo)
 		if (typeof price !== 'number' || typeof stock !== 'number') {
@@ -103,6 +104,14 @@ class ProductManager {
 		const deletedProduct = this.#products.splice(index, 1)[0];
 		await this.saveProducts();
 		return deletedProduct;
+	}
+	async deleteAllProducts() {
+		try {
+			this.#products = [];
+			await this.saveProducts();
+		} catch (error) {
+			throw new Error("Falha ao limpar produtos: " + error.message);
+		}
 	}
 }
 

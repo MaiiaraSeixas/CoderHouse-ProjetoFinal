@@ -1,0 +1,13 @@
+[
+  {
+    "id": 1,
+    "title": "Produto Teste",
+    "description": "Descrição teste",
+    "code": "UNICO123",
+    "price": 100,
+    "status": true,
+    "stock": 10,
+    "category": "Testes",
+    "thumbnails": []
+  }
+]
