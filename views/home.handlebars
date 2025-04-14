@@ -7,9 +7,12 @@
 <body>
   <h1>Produtos</h1>
   <ul>
-    {{#each products}}
-      <li>{{this.title}} - Preço: {{this.price}}</li>
-    {{/each}}
-  </ul>
+  {{#each products}}
+    <li>
+      <strong>{{title}}</strong> - Preço: R$ {{price}} <br>
+      <em>{{description}}</em>
+    </li>
+  {{/each}}
+</ul>
 </body>
 </html>

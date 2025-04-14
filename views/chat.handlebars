@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat em Tempo Real</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Chat em tempo real</h1>
+
+  <form id="chatForm">
+    <input type="email" id="user" placeholder="Seu e-mail" required />
+    <input type="text" id="message" placeholder="Sua mensagem" required />
+    <button type="submit">Enviar</button>
+  </form>
+
+  <ul id="messages"></ul>
+
+  <script>
+    const socket = io();
+
+    const form = document.getElementById('chatForm');
+    const messagesList = document.getElementById('messages');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = document.getElementById('user').value;
+      const message = document.getElementById('message').value;
+      if (user && message) {
+        socket.emit('chatMessage', { user, message });
+        document.getElementById('message').value = '';
+      }
+    });
+
+    socket.on('chatMessage', (data) => {
+      const item = document.createElement('li');
+      item.textContent = `${data.user}: ${data.message}`;
+      messagesList.appendChild(item);
+    });
+  </script>
+</body>
+</html>

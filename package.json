@@ -1,5 +1,17 @@
 {
-  "devDependencies": {
-    "jest": "^29.7.0"
+  "name": "ecommerce-backend",
+  "version": "1.0.0",
+  "description": "Projeto de ecommerce com Mongoose, DAO, Handlebars e Socket.io",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-handlebars": "^7.0.7",
+    "mongoose": "^7.2.1",
+    "socket.io": "^4.7.2",
+    "uuid": "^11.1.0"
   }
 }
