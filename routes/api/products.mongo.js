@@ -1,41 +1,26 @@
 import express from 'express';
 import { ProductManagerMongo } from '../../dao/mongoManagers/ProductManagerMongo.js';
-import { v4 as uuidv4 } from 'uuid';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const router = express.Router();
 const manager = new ProductManagerMongo();
 
-// Config para manter o FileSystem funcionando
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const productsFile = path.join(__dirname, '../../data/productos.json');
-
-// --- FileSystem Helpers (não excluir) ---
-const readProductsFS = async () => {
-  try {
-    const data = await fs.readFile(productsFile, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    return [];
-  }
-};
-
-const writeProductsFS = async (products) => {
-  await fs.writeFile(productsFile, JSON.stringify(products, null, 2));
-};
-
-// --- Mongo + FS em paralelo ---
-
-// GET /api/products?limit=N
+// GET /api/products - com paginação MongoDB
 router.get('/', async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 0;
-    const products = await manager.getAll(limit);
-    res.json(products);
+    const { page = 1, limit = 10, sort, query } = req.query;
+
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sort: sort ? { price: sort === 'asc' ? 1 : -1 } : {}
+    };
+
+    const filter = query ? { category: { $regex: query, $options: 'i' } } : {};
+
+    const result = await manager.paginateProducts(filter, options);
+    res.json(result);
   } catch (err) {
+    console.error('🔥 Erro detalhado ao buscar produtos:', err);
     res.status(500).json({ error: 'Erro ao buscar produtos' });
   }
 });

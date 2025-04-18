@@ -1,23 +1,45 @@
 import ProductModel from '../models/product.model.js';
+import mongoosePaginate from 'mongoose-paginate-v2';
+
+// Ativa o plugin de paginação no schema do Mongoose
 
 export class ProductManagerMongo {
-  async getAll(limit) {
-    const products = await ProductModel.find().limit(limit || 0);
-    return products;
+  async paginateProducts(filter, options) {
+    const result = await ProductModel.paginate(filter, options);
+
+    if (options.page > result.totalPages && result.totalPages !== 0) {
+      return {
+        ...result,
+        docs: [],
+        page: options.page,
+        hasPrevPage: true,
+        hasNextPage: false,
+        prevPage: result.totalPages,
+        nextPage: null,
+        prevLink: `/api/products?page=${result.totalPages}&limit=${options.limit}`,
+        nextLink: null
+      };
+    }
+
+    return result;
   }
 
-  async getById(id) {
+// Buscar por ID
+async getById(id) {
     return await ProductModel.findById(id);
   }
 
-  async createProduct(data) {
-    return await ProductModel.create(data);
+  // Criar novo produto
+  async createProduct(product) {
+    return await ProductModel.create(product);
   }
 
-  async updateProduct(id, updateData) {
-    return await ProductModel.findByIdAndUpdate(id, updateData, { new: true });
+  // Atualizar produto por ID
+  async updateProduct(id, data) {
+    return await ProductModel.findByIdAndUpdate(id, data, { new: true });
   }
 
+  // Deletar produto por ID
   async deleteProduct(id) {
     return await ProductModel.findByIdAndDelete(id);
   }

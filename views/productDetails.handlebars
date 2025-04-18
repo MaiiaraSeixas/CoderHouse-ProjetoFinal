@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalhes do Carrinho</title>
+</head>
+<body>
+    <h1>Carrinho de Compras</h1>
+
+    {{#if products}}
+        <ul>
+            {{#each products}}
+                <li style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3>{{this.product.title}}</h3>
+                        <p><strong>Preço Unitário:</strong> R$ {{this.product.price}}</p>
+                        <p><strong>Quantidade:</strong> {{this.quantity}}</p>
+                        <p><strong>Subtotal:</strong> R$ {{multiply this.product.price this.quantity}}</p>
+                    </div>
+                    <button onclick="removerDoCarrinho('{{../_id}}', '{{this.product._id}}')">Remover</button>
+                </li>
+            {{/each}}
+        </ul>
+        <p><strong>Total no Carrinho: R$ {{calculateTotal products}}</strong></p>
+        <a href="/products">Continuar Comprando</a>
+    {{else}}
+        <p>Seu carrinho está vazio.</p>
+        <a href="/products">Ver Produtos</a>
+    {{/if}}
+
+    <script>
+        // Helper para multiplicar preço e quantidade (precisa ser registrado no Handlebars)
+        Handlebars.registerHelper('multiply', function (a, b) {
+            return a * b;
+        });
+
+        // Helper para calcular o total do carrinho (precisa ser registrado no Handlebars)
+        Handlebars.registerHelper('calculateTotal', function (products) {
+            let total = 0;
+            products.forEach(item => {
+                total += item.product.price * item.quantity;
+            });
+            return total.toFixed(2);
+        });
+
+        async function removerDoCarrinho(cartId, productId) {
+            try {
+                const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    console.log('Produto removido do carrinho.');
+                    alert('Produto removido do carrinho.');
+                    // Recarrega a página para atualizar a visualização do carrinho
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    console.error('Erro ao remover produto do carrinho:', error);
+                    alert('Erro ao remover produto do carrinho.');
+                }
+            } catch (error) {
+                console.error('Erro de rede ao remover produto do carrinho:', error);
+                alert('Erro ao remover produto do carrinho.');
+            }
+        }
+    </script>
+</body>
+</html>

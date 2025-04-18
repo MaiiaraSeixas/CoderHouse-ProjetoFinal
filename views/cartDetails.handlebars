@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalhes do Carrinho</title>
+</head>
+<body>
+    <h1>Carrinho de Compras</h1>
+
+    {{#if products}}
+        <ul>
+            {{#each products}}
+                <li style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3>{{this.product.title}}</h3>
+                        <p><strong>Preço Unitário:</strong> R$ {{this.product.price}}</p>
+                        <div>
+                            <strong>Quantidade:</strong>
+                            <input type="number" id="quantity-{{this.product._id}}" value="{{this.quantity}}" min="1" style="width: 50px;">
+                            <button onclick="atualizarQuantidade('{{../_id}}', '{{this.product._id}}')">Atualizar</button>
+                        </div>
+                        <p><strong>Subtotal:</strong> R$ {{multiply this.product.price this.quantity}}</p>
+                    </div>
+                    <button onclick="removerDoCarrinho('{{../_id}}', '{{this.product._id}}')">Remover</button>
+                </li>
+            {{/each}}
+        </ul>
+        <p><strong>Total no Carrinho: R$ {{calculateTotal products}}</strong></p>
+        <a href="/products">Continuar Comprando</a>
+    {{else}}
+        <p>Seu carrinho está vazio.</p>
+        <a href="/products">Ver Produtos</a>
+    {{/if}}
+
+    <script>
+        // Helper para multiplicar preço e quantidade (precisa ser registrado no Handlebars)
+        Handlebars.registerHelper('multiply', function (a, b) {
+            return a * b;
+        });
+
+        // Helper para calcular o total do carrinho (precisa ser registrado no Handlebars)
+        Handlebars.registerHelper('calculateTotal', function (products) {
+            let total = 0;
+            products.forEach(item => {
+                total += item.product.price * item.quantity;
+            });
+            return total.toFixed(2);
+        });
+
+        async function removerDoCarrinho(cartId, productId) {
+            try {
+                const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    console.log('Produto removido do carrinho.');
+                    alert('Produto removido do carrinho.');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    console.error('Erro ao remover produto do carrinho:', error);
+                    alert('Erro ao remover produto do carrinho.');
+                }
+            } catch (error) {
+                console.error('Erro de rede ao remover produto do carrinho:', error);
+                alert('Erro ao remover produto do carrinho.');
+            }
+        }
+
+        async function atualizarQuantidade(cartId, productId) {
+            const quantityInput = document.getElementById(`quantity-${productId}`);
+            const newQuantity = parseInt(quantityInput.value);
+
+            if (isNaN(newQuantity) || newQuantity < 1) {
+                alert('Por favor, insira uma quantidade válida.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ quantity: newQuantity }),
+                });
+
+                if (response.ok) {
+                    console.log('Quantidade do produto atualizada.');
+                    alert('Quantidade do produto atualizada.');
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    console.error('Erro ao atualizar quantidade:', error);
+                    alert('Erro ao atualizar quantidade.');
+                }
+            } catch (error) {
+                console.error('Erro de rede ao atualizar quantidade:', error);
+                alert('Erro ao atualizar quantidade.');
+            }
+        }
+    </script>
+</body>
+</html>
