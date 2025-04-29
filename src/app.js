@@ -13,6 +13,13 @@ import productsRouter from '../routes/api/products.js'; // FileSystem
 import productMongoRoutes from '../routes/api/products.mongo.js';
 import cartMongoRoutes from '../routes/api/carts.mongo.js';
 
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+
+import { isAuthenticated } from '../middlewares/auth.js';
+
+import authRoutes from '../routes/auth.routes.js'; // Rotas de autenticação
+
 // Configuração inicial
 const app = express();
 const server = http.createServer(app);
@@ -29,6 +36,8 @@ app.use(express.static(path.join(__dirname, '../public'))); // se quiser usar CS
 mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://MaiiaraSeixas:%40Coder25@cluster0.noqqyct.mongodb.net/ecommerce?retryWrites=true&w=majority&appName=Cluster0') // substitua pela URI real
     .then(() => console.log('MongoDB conectado'))
     .catch(err => console.error('Erro ao conectar no MongoDB:', err));
+
+
 
 // Handlebars (view engine)
 const hbs = exphbs.create({
@@ -51,6 +60,20 @@ app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, '../views'));
 
+app.use(session({
+    store: MongoStore.create({
+        mongoUrl: 'mongodb+srv://MaiiaraSeixas:%40Coder25@cluster0.noqqyct.mongodb.net/ecommerce?retryWrites=true&w=majority&appName=Cluster0'
+
+    }),
+    secret: 'chaveUltraSecreta123',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 1000 * 60 * 60 } // 1h
+}));
+
+// 🔥 Usa as rotas de autenticação
+app.use('/', authRoutes);
+
 // Rotas API
 app.use('/api/products', productMongoRoutes);
 app.use('/api/products/fs', productsRouter); // opcional: FileSystem em rota separada
@@ -62,7 +85,7 @@ app.get('/', async (req, res) => {
     res.render('home', { products });
 });
 
-app.get('/products', async (req, res) => {
+app.get('/products', isAuthenticated, async (req, res) => {
     const { limit = 10, page = 1 } = req.query;
     const numLimit = parseInt(limit);
     const numPage = parseInt(page);
@@ -75,6 +98,7 @@ app.get('/products', async (req, res) => {
         const result = await ProductModel.paginate({}, { page: numPage, limit: numLimit, lean: true });
         res.render('products', {
             products: result.docs,
+            user: req.session.user,
             totalPages: result.totalPages,
             currentPage: result.page,
             hasPrevPage: result.hasPrevPage,

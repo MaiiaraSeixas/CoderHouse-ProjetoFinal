@@ -11,6 +11,10 @@
 </head>
 <body>
     <h1>Lista de Produtos</h1>
+{{#if user}}
+<p>👋 Bem-vindo, {{user.name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
+<p><a href="/logout">Sair</a></p>
+{{/if}}
 
     <ul>
         {{#each products}}
