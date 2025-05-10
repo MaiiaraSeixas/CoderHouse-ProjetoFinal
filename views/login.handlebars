@@ -1,7 +1,27 @@
+<!-- Título da seção de login -->
 <h2>Login</h2>
+
+<!-- Formulário de autenticação com método POST -->
 <form method="POST" action="/login">
-  <input name="email" type="email" placeholder="Email" required />
-  <input name="password" type="password" placeholder="Senha" required />
+  <!-- Campo para email com validação nativa -->
+  <input 
+    name="email" 
+    type="email" 
+    placeholder="Email" 
+    required <!-- Validação HTML5 obrigatória -->
+  />
+  
+  <!-- Campo para senha com proteção de input -->
+  <input 
+    name="password" 
+    type="password" 
+    placeholder="Senha" 
+    required <!-- Validação HTML5 obrigatória -->
+  />
+  
+  <!-- Botão de submissão do formulário -->
   <button type="submit">Entrar</button>
 </form>
+
+<!-- Link para página de cadastro -->
 <a href="/register">Criar conta</a>

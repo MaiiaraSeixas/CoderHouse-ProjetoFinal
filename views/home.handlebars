@@ -2,17 +2,22 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Lista de Produtos</title>
+  <title>Lista de Produtos</title> <!-- Título da página -->
 </head>
 <body>
+  <!-- Cabeçalho principal -->
   <h1>Produtos</h1>
+  
+  <!-- Lista não ordenada de produtos -->
   <ul>
-  {{#each products}}
+    {{#each products}} <!-- Bloco Handlebars para iterar sobre a array de produtos -->
     <li>
+      <!-- Exibe o título em negrito -->
       <strong>{{title}}</strong> - Preço: R$ {{price}} <br>
+      <!-- Exibe a descrição em itálico -->
       <em>{{description}}</em>
     </li>
-  {{/each}}
-</ul>
+    {{/each}} <!-- Fim do bloco de iteração -->
+  </ul>
 </body>
 </html>

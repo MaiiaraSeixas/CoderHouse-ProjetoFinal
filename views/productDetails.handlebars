@@ -1,69 +1,115 @@
+<!-- ====== productDetails.handlebars (Corrigido) ====== -->
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Detalhes do Carrinho</title>
+  <meta charset="UTF-8">
+  <title>{{product.title}} - Detalhes</title>
+  <!-- Estilos da página -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    .product-box {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
+
 <body>
-    <h1>Carrinho de Compras</h1>
+  <div class="container">
+    <!-- Container principal do produto -->
+    <div class="product-box">
+      <!-- Bloco de informações do produto -->
+      <h2>{{product.title}}</h2>
+      <p><strong>Descrição:</strong> {{product.description}}</p>
+      <p><strong>Preço:</strong> R$ {{product.price}}</p>
+      <p><strong>Categoria:</strong> {{product.category}}</p>
+      <p><strong>Disponível em estoque:</strong> {{product.stock}}</p>
 
-    {{#if products}}
-        <ul>
-            {{#each products}}
-                <li style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3>{{this.product.title}}</h3>
-                        <p><strong>Preço Unitário:</strong> R$ {{this.product.price}}</p>
-                        <p><strong>Quantidade:</strong> {{this.quantity}}</p>
-                        <p><strong>Subtotal:</strong> R$ {{multiply this.product.price this.quantity}}</p>
-                    </div>
-                    <button onclick="removerDoCarrinho('{{../_id}}', '{{this.product._id}}')">Remover</button>
-                </li>
-            {{/each}}
-        </ul>
-        <p><strong>Total no Carrinho: R$ {{calculateTotal products}}</strong></p>
-        <a href="/products">Continuar Comprando</a>
-    {{else}}
-        <p>Seu carrinho está vazio.</p>
-        <a href="/products">Ver Produtos</a>
-    {{/if}}
+      <!-- Bloco condicional para adição ao carrinho -->
+      {{#if cartId}}
+      <!-- Verifica se há estoque disponível -->
+      {{#if (gt product.stock 0)}}
+      <!-- Formulário para adicionar produtos ao carrinho -->
+      <form id="addToCartForm">
+        <!-- Input para quantidade com validação de estoque -->
+        <input type="number" name="quantity" min="1" max="{{product.stock}}" value="1" required />
+        <button type="submit" class="btn">Adicionar ao Carrinho</button>
+      </form>
 
-    <script>
-        // Helper para multiplicar preço e quantidade (precisa ser registrado no Handlebars)
-        Handlebars.registerHelper('multiply', function (a, b) {
-            return a * b;
-        });
+      <!-- Script de controle do formulário -->
+      <script>
+        // Configura o event listener para o envio do formulário
+        document.getElementById('addToCartForm').addEventListener('submit', async (e) => {
+          e.preventDefault(); // Impede o comportamento padrão de recarregar a página
 
-        // Helper para calcular o total do carrinho (precisa ser registrado no Handlebars)
-        Handlebars.registerHelper('calculateTotal', function (products) {
-            let total = 0;
-            products.forEach(item => {
-                total += item.product.price * item.quantity;
+          // Coleta dos dados do formulário
+          const quantity = parseInt(e.target.quantity.value); // Converte para número
+          const cartId = '{{cartId}}'; // ID do carrinho injetado pelo template
+          const productId = '{{product._id}}'; // ID do produto injetado pelo template
+
+          try {
+            // Requisição para API de carrinhos
+            const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ quantity }) // Envia quantidade como JSON
             });
-            return total.toFixed(2);
-        });
 
-        async function removerDoCarrinho(cartId, productId) {
-            try {
-                const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
-                    method: 'DELETE',
-                });
+            // Processamento da resposta
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Erro na requisição'); // Verifica status HTTP
 
-                if (response.ok) {
-                    console.log('Produto removido do carrinho.');
-                    alert('Produto removido do carrinho.');
-                    // Recarrega a página para atualizar a visualização do carrinho
-                    window.location.reload();
-                } else {
-                    const error = await response.json();
-                    console.error('Erro ao remover produto do carrinho:', error);
-                    alert('Erro ao remover produto do carrinho.');
-                }
-            } catch (error) {
-                console.error('Erro de rede ao remover produto do carrinho:', error);
-                alert('Erro ao remover produto do carrinho.');
+            // Feedback de sucesso
+            if (data && !data.error) {
+              alert('Produto adicionado ao carrinho!');
             }
-        }
-    </script>
+          } catch (err) {
+            // Tratamento de erros
+            console.error('Erro ao adicionar produto:', err);
+            alert('Erro: ' + err.message);
+          }
+        });
+      </script>
+      {{else}}
+      <!-- Mensagem de produto esgotado -->
+      <p style="color: red">Produto esgotado</p>
+      {{/if}}
+      {{else}}
+      <!-- Mensagem de carrinho não encontrado -->
+      <p style="color: red">⚠️ Carrinho não encontrado.</p>
+      {{/if}}
+
+      <!-- Botão de retorno à lista de produtos -->
+      <br><br>
+      <a href="/products" class="btn">⬅ Voltar para Produtos</a>
+    </div>
+  </div>
 </body>
+
 </html>

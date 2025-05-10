@@ -1,42 +1,69 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <title>Chat em Tempo Real</title>
+  <!-- Carrega a biblioteca Socket.IO do lado do cliente -->
   <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body>
+  <!-- Título principal da página -->
   <h1>Chat em tempo real</h1>
 
+  <!-- Formulário de envio de mensagens -->
   <form id="chatForm">
+    <!-- Campo para e-mail do usuário -->
     <input type="email" id="user" placeholder="Seu e-mail" required />
+    <!-- Campo para digitar a mensagem -->
     <input type="text" id="message" placeholder="Sua mensagem" required />
+    <!-- Botão de envio -->
     <button type="submit">Enviar</button>
   </form>
 
+  <!-- Lista não ordenada para exibir as mensagens -->
   <ul id="messages"></ul>
 
+  <!-- Script de controle do chat -->
   <script>
+    // Inicializa a conexão WebSocket com o servidor
     const socket = io();
 
+    // Referências aos elementos DOM
     const form = document.getElementById('chatForm');
     const messagesList = document.getElementById('messages');
 
+    // Event listener para envio do formulário
     form.addEventListener('submit', (e) => {
-      e.preventDefault();
+      e.preventDefault(); // Impede recarregamento da página
+
+      // Obtém valores dos campos
       const user = document.getElementById('user').value;
       const message = document.getElementById('message').value;
+
+      // Validação básica dos campos
       if (user && message) {
+        // Envia mensagem para o servidor via Socket.IO
         socket.emit('chatMessage', { user, message });
+
+        // Limpa campo de mensagem após envio
         document.getElementById('message').value = '';
       }
     });
 
+    // Listener para recebimento de novas mensagens
     socket.on('chatMessage', (data) => {
+      // Cria novo elemento de lista
       const item = document.createElement('li');
+
+      // Formata conteúdo da mensagem
       item.textContent = `${data.user}: ${data.message}`;
+
+      // Adiciona mensagem à lista
       messagesList.appendChild(item);
     });
   </script>
 </body>
+
 </html>
