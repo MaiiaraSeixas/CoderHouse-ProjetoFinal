@@ -1,177 +1,168 @@
-// ====== Configuração principal do servidor ======
+// app.js
+import express from 'express';
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
+import mongoose from 'mongoose';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import { Server } from 'socket.io';
+import http from 'http';
+import exphbs from 'express-handlebars';
 
-// Configuração de caminhos para ES Modules
+// Middlewares e Configs
+import { initializePassport } from '../config/passport.js';
+import responseMiddleware from '../middlewares/responseMiddleware.js';
+import { isAuthenticated } from '../middlewares/auth.js';
+import { errorHandler } from '../middlewares/errorHandler.js';
+
+// Rotas
+import authRoutes from '../routes/auth.routes.js';
+import productsRouter from '../routes/products.js';
+import productMongoRoutes from '../routes/products.mongo.js';
+import cartMongoRoutes from '../routes/carts.mongo.js';
+import cartRoutes from '../routes/carts.routes.js';
+import productsViewRouter from '../routes/products.view.js';
+
+// Modelos
+import ProductModel from '../models/product.model.js';
+import MessageModel from '../models/message.model.js';
+
+// Diretórios
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Carrega variáveis de ambiente
-config({ path: path.resolve(__dirname, '../.env') });
+// Configura variáveis de ambiente
+dotenv.config({ path: path.resolve(__dirname, './.env') });
 
-// Importações de segurança e autenticação
-import passport from 'passport';
-import '../config/passportConfig.js'; // Estratégias de autenticação
-
-// Importações principais do Express
-import express from 'express';
-import mongoose from 'mongoose';
-import http from 'http';
-import { Server } from 'socket.io';
-import exphbs from 'express-handlebars';
-
-// Modelos de dados
-import MessageModel from '../dao/models/message.model.js';
-import ProductModel from '../dao/models/product.model.js';
-
-// Rotas da aplicação
-import productsRouter from '../routes/api/products.js';
-import productMongoRoutes from '../routes/api/products.mongo.js';
-import cartMongoRoutes from '../routes/api/carts.mongo.js';
-
-// Configuração de sessão
-import session from 'express-session';
-import MongoStore from 'connect-mongo';
-
-// Middlewares e rotas de autenticação
-import { isAuthenticated } from '../middlewares/auth.js';
-import authRoutes from '../routes/auth.routes.js';
-
-// ====== Inicialização do servidor ======
+// Inicialização
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server); // Configura Socket.IO
+const io = new Server(server);
 
-// Middlewares básicos
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Conexão com MongoDB
+// MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB conectado'))
-  .catch(err => console.error('Erro ao conectar no MongoDB:', err));
+  .then(() => console.log('✅ MongoDB conectado'))
+  .catch(err => console.error('❌ Erro ao conectar no MongoDB:', err));
 
-// Configuração do Handlebars com helpers customizados
+// Handlebars
 const hbs = exphbs.create({
+  layoutsDir: path.resolve(__dirname, '../views/layouts'),
+  defaultLayout: 'main',
   runtimeOptions: {
-    allowProtoPropertiesByDefault: true, // Permite acesso a propriedades de protótipo
-    allowProtoMethodsByDefault: true
+    allowProtoPropertiesByDefault: true,
+    allowProtoMethodsByDefault: true,
   },
   helpers: {
-    multiply: (a, b) => a * b, // Calcula subtotal
-    calculateTotal: (products) => { // Calcula total do carrinho
-      let total = 0;
-      products.forEach(item => {
-        total += item.product.price * item.quantity;
-      });
-      return total.toFixed(2);
-    },
-    gt: (a, b) => a > b // Helper para comparação
+    multiply: (a, b) => a * b,
+    calculateTotal: (products) =>
+      products.reduce((total, item) => total + item.product.price * item.quantity, 0).toFixed(2),
+    gt: (a, b) => a > b
   }
 });
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, '../views'));
+app.set('views', path.resolve(__dirname, '../views'));
 
-// Configuração de sessão com armazenamento no MongoDB
+// Middlewares globais
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, './public')));
+app.use(responseMiddleware);
+
+// Sessão e Passport
 app.use(session({
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI
-  }),
-  secret: 'chaveUltraSecreta123', // Deve ser alterado em produção
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+  secret: process.env.SESSION_SECRET || 'supersecret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 } // Sessão de 1 hora
+  cookie: { maxAge: 1000 * 60 * 60 }
 }));
-
-// Inicialização do Passport
+initializePassport();
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ====== Configuração de rotas ======
-app.use('/', authRoutes); // Rotas de autenticação
-app.use('/api/products', productMongoRoutes); // Produtos com MongoDB
-app.use('/api/products/fs', productsRouter); // Produtos com FileSystem (legado)
-app.use('/api/carts', cartMongoRoutes); // Carrinhos com MongoDB
+// Rotas da API
+app.use('/api/sessions', authRoutes);
+app.use('/api/products', productMongoRoutes);
+app.use('/api/products/fs', productsRouter);
+// app.use('/api/carts', cartMongoRoutes);
+app.use('/api/carts', cartRoutes);
 
-// Rota principal com lista de produtos
+// Rotas de Visualização
+app.use(
+  '/products',
+  passport.authenticate('jwt', { session: false }),
+  productsViewRouter
+);
+
+// Página inicial
 app.get('/', async (req, res) => {
-  const products = await ProductModel.find().lean(); // lean() para objetos simples
-  res.render('home', { products });
+  const products = await ProductModel.find().lean();
+  res.render('pages/home', { products });
 });
 
-// Rota paginada de produtos com autenticação
-app.get('/products', isAuthenticated, async (req, res) => {
-  const { limit = 10, page = 1 } = req.query;
-  // Validação de parâmetros
-  const numLimit = parseInt(limit);
-  const numPage = parseInt(page);
 
-  if (isNaN(numLimit) || numLimit <= 0 || isNaN(numPage) || numPage <= 0) {
-    return res.status(400).send('Parâmetros de limite ou página inválidos.');
-  }
 
-  try {
-    const result = await ProductModel.paginate({}, {
-      page: numPage,
-      limit: numLimit,
-      lean: true
-    });
+// ✅ Página de produtos (corrigida)
+// app.get('/products', passport.authenticate('jwt', { session: false }), async (req, res) => {
+//   try {
+//   console.log('[DEBUG] req.user:', req.user);
+//   console.log('[DEBUG] req.session:', req.session);
 
-    // Renderização com dados para paginação
-    res.render('products', {
-      products: result.docs,
-      user: req.session.user, // Dados do usuário logado
-      cartId: req.session.cartId, // ID do carrinho na sessão
-      totalPages: result.totalPages,
-      currentPage: result.page,
-      hasPrevPage: result.hasPrevPage,
-      hasNextPage: result.hasNextPage,
-      prevPage: result.prevPage,
-      nextPage: result.nextPage,
-      limit: numLimit
-    });
-  } catch (error) {
-    console.error('Erro ao buscar produtos para a view:', error);
-    res.status(500).send('Erro ao carregar a página de produtos.');
-  }
-});
 
-// Rota de detalhes do produto
-app.get('/products/:pid', async (req, res) => {
-  const { pid } = req.params;
-  try {
-    const product = await ProductModel.findById(pid).lean();
-    if (!product) {
-      return res.status(404).send('Produto não encontrado.');
-    }
-    res.render('productDetails', {
-      product,
-      cartId: req.session.cartId || null, // Passa cartId para a view
-      user: req.session.user
-    });
-  } catch (error) {
-    console.error('Erro ao buscar detalhes do produto:', error);
-    res.status(500).send('Erro ao carregar os detalhes do produto.');
-  }
-});
+//   const products = await ProductModel.find().lean();
+//   const user = req.user || null;
+//   const cartId = user?.cartId?.toString() || null;
 
-// Rota do chat
-app.get('/chat', (req, res) => {
-  res.render('chat');
-});
+//   console.log('🛒 Produtos carregados:', products.length); // Verifica a quantidade de produtos
+//   console.log('📦 cartId enviado para a view:', cartId); // Verifica o ID do carrinho
+//   console.log('[DEBUG] user que será enviado para a view:', user);
+  
 
-// ====== Configuração do Socket.IO ======
+
+//   res.render('pages/products', {
+//     user,
+//     cartId,
+//     products,
+//     currentPage: 1,
+//     totalPages: 1,
+//     hasPrevPage: false,
+//     hasNextPage: false,
+//     prevPage: null,
+//     nextPage: null,
+//     limit: products.length
+//   });
+//   } catch (err) {
+//     console.error('❌ Erro ao carregar os produtos:', err);
+//     res.status(500).json({ error: 'Erro ao carregar os produtos' });
+//   }
+// });
+
+// Outras páginas
+app.get('/chat', (req, res) => res.render('pages/chat'));
+app.get('/login', (req, res) => res.render('pages/login'));
+app.get('/register', (req, res) => res.render('pages/register'));
+
+// WebSocket
 io.on('connection', socket => {
-  console.log('Novo usuário conectado ao chat');
+  console.log('🔌 Usuário conectado');
   socket.on('chatMessage', async data => {
-    await MessageModel.create(data); // Salva mensagem no MongoDB
-    io.emit('chatMessage', data); // Broadcast da mensagem
+    await MessageModel.create(data);
+    io.emit('chatMessage', data);
   });
 });
 
-// Inicialização do servidor
+// Middleware de erros
+app.use(errorHandler);
+
+// Start
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});

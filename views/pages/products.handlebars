@@ -32,7 +32,7 @@
   <!-- Seção de informações do usuário logado -->
   {{#if user}}
   <div class="user-info">
-    <p>👋 Bem-vindo, {{user.name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
+    <p>👋 Bem-vindo, {{user.first_name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
     <p><a href="/logout">Sair</a></p>
   </div>
   {{/if}}
@@ -57,7 +57,7 @@
         <span style="color: red">Produto esgotado</span>
         {{/if}}
         <!-- Link para detalhes do produto -->
-        <a href="/products/{{this._id}}">Ver Detalhes</a>
+        <a href="/products/{{this._id}}/view">Ver Detalhes</a>
       </div>
     </li>
     {{else}}
@@ -67,27 +67,30 @@
   </ul>
 
   <!-- Controle de paginação -->
-  <div class="pagination">
-    {{#if hasPrevPage}}
-    <a href="/products?page={{prevPage}}&limit={{limit}}">Página Anterior</a>
-    {{/if}}
-    <!-- Indicador de página atual -->
-    <span class="current-page">Página {{currentPage}} de {{totalPages}}</span>
-    {{#if hasNextPage}}
-    <a href="/products?page={{nextPage}}&limit={{limit}}">Próxima Página</a>
-    {{/if}}
-  </div>
+<div class="pagination">
+  {{#if prevLink}}
+    <a href="{{prevLink}}">Página Anterior</a>
+  {{/if}}
+
+  <span class="current-page">Página {{currentPage}} de {{totalPages}}</span>
+
+  {{#if nextLink}}
+    <a href="{{nextLink}}">Próxima Página</a>
+  {{/if}}
+</div>
+
 
   <!-- Scripts de interação com o carrinho -->
   <script>
+
     // Pega o cartId passado pelo backend (sessão)
-    const cartId = '{{cartId}}';
+    const cartId = '{{user.cartId}}';
 
     // Função para adicionar produto ao carrinho
     async function adicionarAoCarrinho(productId) {
       try {
         const quantity = 1; // Quantidade padrão
-
+        
         if (!cartId || cartId === 'null') {
           throw new Error('Carrinho não encontrado na sessão.');
         }

@@ -1,104 +1,388 @@
-// routes/auth.routes.js (ATUALIZADO COM ROTA DO CARRINHO)
-import express from 'express';
-import bcrypt from 'bcrypt';
+// routes/auth.routes.js
+
+import { Router } from 'express';
 import passport from 'passport';
-import UserModel from '../dao/models/user.model.js';
-import CartModel from '../dao/models/cart.model.js';
+import { generateToken } from '../utils/jwt.js';
+import CartModel from '../models/cart.model.js'; // Import do modelo de carrinho
 
-const router = express.Router();
+const router = Router();
 
-// ========== ROTAS DE VIEWS ==========
-router.get('/login', (req, res) => {
-  res.render('login');
-});
+// Helper para configurar cookie JWT
+function setAuthCookie(res, token) {
+  res.cookie('jwtCookieToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict',
+    maxAge: 60 * 60 * 1000, // 1h
+  });
+}
 
-router.get('/register', (req, res) => {
-  res.render('register');
-});
-
-// ========== REGISTRO ==========
-router.post('/register', async (req, res) => {
-  const { first_name, last_name, email, password } = req.body;
-  const userExists = await UserModel.findOne({ email });
-  if (userExists) return res.status(400).send('E-mail já cadastrado.');
-
-  const role = (email === 'adminCoder@coder.com' && password === 'adminCod3r123') ? 'admin' : 'user';
-  const hashedPassword = await bcrypt.hash(password, 10);
-  await UserModel.create({ first_name, last_name, email, password: hashedPassword, role });
-
-  res.redirect('/login');
-});
-
-// ========== LOGIN ==========
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  const user = await UserModel.findOne({ email });
-  if (!user) return res.status(401).send('Usuário não encontrado.');
-
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) return res.status(401).send('Senha inválida.');
-
-  // Cria carrinho vinculado ao e-mail, se não existir
-  let cart = await CartModel.findOne({ userEmail: email });
-  if (!cart) {
-    cart = await CartModel.create({ userEmail: email, products: [] });
-  }
-
-  req.session.user = {
-    name: user.first_name,
-    email: user.email,
-    role: user.role
-  };
-  req.session.cartId = cart._id;
-
-  res.redirect('/products');
-});
-
-// ========== LOGOUT ==========
-router.get('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/login'));
-});
-
-// ========== LOGIN VIA GITHUB ==========
-router.get('/auth/github',
-  passport.authenticate('github', { scope: ['user:email'] })
-);
-
-router.get('/auth/github/callback',
-  passport.authenticate('github', { failureRedirect: '/login' }),
-  async (req, res) => {
-    // Cria carrinho se não existir para esse usuário GitHub
-    let cart = await CartModel.findOne({ userEmail: req.user.email });
-    if (!cart) {
-      cart = await CartModel.create({ userEmail: req.user.email, products: [] });
+// Wrapper genérico de login (HTML ou API)
+function handleLogin(req, res, next, isApi = false) {
+  passport.authenticate('login', { session: false }, async (err, user, info) => {
+    if (err) {
+      console.error('[LOGIN ERROR]', err);
+      if (isApi) return res.status(500).json({ status: 'error', error: 'Erro interno no servidor' });
+      return res.redirect('/login?error=1');
     }
 
-    req.session.user = {
-      name: req.user.first_name,
-      email: req.user.email,
-      role: req.user.role || 'user'
-    };
-    req.session.cartId = cart._id;
+    if (!user) {
+      const msg = info?.message || 'Credenciais inválidas';
+      console.warn('[LOGIN FAIL]', msg);
+      if (isApi) return res.status(401).json({ status: 'error', error: msg });
+      return res.redirect('/login?error=1');
+    }
 
-    res.redirect('/products');
+    try {
+      console.log('[DEBUG] Usuário recuperado para gerar token:', user);
+
+      const tokenPayload = {
+      
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          cartId: user.cartId?.toString()
+        
+      };
+
+      const token = generateToken(tokenPayload);
+
+      if (!token) {
+        console.error('[DEBUG] Falha ao gerar token. Payload:', tokenPayload);
+        if (isApi) return res.status(500).json({ status: 'error', error: 'Erro ao gerar token' });
+        return res.redirect('/login?error=2');
+      }
+
+      setAuthCookie(res, token);
+
+      if (!isApi) {
+        req.session.user = {
+          _id: user._id,
+          first_name: user.first_name,
+          email: user.email,
+          role: user.role,
+        };
+
+        const cart = await CartModel.findOne({ user: user._id })
+          || await CartModel.create({ user: user._id, products: [] });
+
+        req.session.cartId = cart._id;
+
+        return res.redirect('/products');
+      }
+
+      return res.sendSuccess('Login bem-sucedido');
+    } catch (tokenErr) {
+      console.error('[TOKEN ERROR]', tokenErr);
+      if (isApi) return res.status(500).json({ status: 'error', error: 'Erro ao gerar token' });
+      return res.redirect('/login?error=2');
+    }
+  })(req, res, next);
+}
+
+// ----------------------
+// Registro via Formulário
+// ----------------------
+router.post(
+  '/register/form',
+  passport.authenticate('register', {
+    failureRedirect: '/register?error=1',
+    session: false
+  }),
+  (req, res) => res.redirect('/login')
+);
+
+// ----------------------
+// Login via Formulário
+// ----------------------
+router.post('/login/form', (req, res, next) => {
+  handleLogin(req, res, next, false);
+});
+
+// ----------------------
+// Registro via API (Postman/SPA)
+// ----------------------
+router.post(
+  '/register',
+  passport.authenticate('register', { session: false }),
+  (req, res) => {
+    try {
+      res.sendSuccess('Usuário registrado com sucesso', {
+        user: {
+          id: req.user._id,
+          first_name: req.user.first_name,
+          last_name: req.user.last_name,
+          email: req.user.email
+        }
+      });
+    } catch (e) {
+      console.error('[REGISTER API ERROR]', e);
+      res.status(500).json({ status: 'error', error: 'Erro interno no servidor' });
+    }
   }
 );
 
-// ========== ROTA DE VISUALIZAÇÃO DO CARRINHO ==========
-router.get('/cart', async (req, res) => {
-  const cartId = req.session.cartId;
-  if (!cartId) return res.render('cartDetails', { products: [], empty: true });
+// ----------------------
+// Login via API (Postman/SPA)
+// ----------------------
+router.post('/login', (req, res, next) => {
+  handleLogin(req, res, next, true);
+});
 
-  const cart = await CartModel.findById(cartId).populate('products.product').lean();
-  if (!cart || cart.products.length === 0) {
-    return res.render('cartDetails', { products: [], empty: true });
+// ----------------------
+// Rota /current
+// ----------------------
+router.get(
+  '/current',
+  passport.authenticate('jwt', { session: false }),
+  (req, res) => {
+    try {
+      const { _id, first_name, last_name, email, role } = req.user;
+      res.sendSuccess('Usuário autenticado', {
+        user: { _id, first_name, last_name, email, role }
+      });
+    } catch (e) {
+      console.error('[CURRENT USER ERROR]', e);
+      res.status(500).json({ status: 'error', error: 'Erro ao recuperar dados do usuário' });
+    }
   }
+);
 
-  res.render('cartDetails', {
-    products: cart.products,
-    cartId: cart._id,
-    empty: false
-  });
+// ----------------------
+// Logout
+// ----------------------
+router.get('/logout', (req, res) => {
+  try {
+    // Limpa cookie JWT com flags de segurança
+    res.clearCookie('jwtCookieToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict'
+    });
+
+    // Resposta dinâmica para HTML vs API
+    if (req.accepts('html')) {
+      req.logout(() => res.redirect('/login'));
+    } else {
+      res.sendSuccess('Logout realizado com sucesso');
+    }
+  } catch (e) {
+    console.error('[LOGOUT ERROR]', e);
+    res.status(500).json({ status: 'error', error: 'Erro durante logout' });
+  }
 });
 
 export default router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // routes/auth.routes.js
+
+// import { Router } from 'express';
+// import passport from 'passport';
+// import { generateToken } from '../utils/jwt.js';
+// import CartModel from '../models/cart.model.js'; // Import do modelo de carrinho
+
+// const router = Router();
+
+// // Helper para configurar cookie JWT
+// function setAuthCookie(res, token) {
+//   res.cookie('jwtCookieToken', token, {
+//     httpOnly: true,
+//     secure: process.env.NODE_ENV === 'production',
+//     sameSite: 'Strict',
+//     maxAge: 60 * 60 * 1000, // 1h
+//   });
+// }
+
+// // Wrapper genérico de login (HTML ou API)
+// function handleLogin(req, res, next, isApi = false) {
+//   passport.authenticate('login', { session: false }, async (err, user, info) => {
+//     if (err) {
+//       console.error('[LOGIN ERROR]', err);
+//       if (isApi) return res.status(500).json({ status: 'error', error: 'Erro interno no servidor' });
+//       return res.redirect('/login?error=1');
+//     }
+
+//     if (!user) {
+//       const msg = info?.message || 'Credenciais inválidas';
+//       console.warn('[LOGIN FAIL]', msg);
+//       if (isApi) return res.status(401).json({ status: 'error', error: msg });
+//       return res.redirect('/login?error=1');
+//     }
+
+//     try {
+//       // Gera o token corretamente
+//       const token = generateToken({
+//   user: {
+//     _id: user._id,
+//     email: user.email,
+//     role: user.role,
+//     cartId: user.cartId
+//   }
+// });
+//       // ✅ Corrigido: token com estrutura correta para o passport.js
+//       if (!token) {
+//         if (isApi) return res.status(500).json({ status: 'error', error: 'Erro ao gerar token' });
+//         return res.redirect('/login?error=2');
+//       }
+
+//       // Define o cookie JWT com flags de segurança
+//       setAuthCookie(res, token);
+
+//       // Mantém sessão para HTML
+//       if (!isApi) {
+//         // Sessão do usuário
+//         req.session.user = {
+//           _id: user._id,
+//           first_name: user.first_name,
+//           email: user.email,
+//           role: user.role,
+//         };
+
+//         // Cria ou obtém carrinho e salva na sessão
+//         const cart = await CartModel.findOne({ user: user._id })
+//           || await CartModel.create({ user: user._id, products: [] });
+//         req.session.cartId = cart._id;
+
+//         return res.redirect('/products');
+//       }
+
+//       return res.sendSuccess('Login bem-sucedido');
+//     } catch (tokenErr) {
+//       console.error('[TOKEN ERROR]', tokenErr);
+//       if (isApi) return res.status(500).json({ status: 'error', error: 'Erro ao gerar token' });
+//       return res.redirect('/login?error=2');
+//     }
+//   })(req, res, next);
+// }
+
+// // ----------------------
+// // Registro via Formulário
+// // ----------------------
+// router.post(
+//   '/register/form',
+//   passport.authenticate('register', {
+//     failureRedirect: '/register?error=1',
+//     session: false
+//   }),
+//   (req, res) => res.redirect('/login')
+// );
+
+// // ----------------------
+// // Login via Formulário
+// // ----------------------
+// router.post('/login/form', (req, res, next) => {
+//   handleLogin(req, res, next, false);
+// });
+
+// // ----------------------
+// // Registro via API (Postman/SPA)
+// // ----------------------
+// router.post(
+//   '/register',
+//   passport.authenticate('register', { session: false }),
+//   (req, res) => {
+//     try {
+//       res.sendSuccess('Usuário registrado com sucesso', {
+//         user: {
+//           id: req.user._id,
+//           first_name: req.user.first_name,
+//           last_name: req.user.last_name,
+//           email: req.user.email
+//         }
+//       });
+//     } catch (e) {
+//       console.error('[REGISTER API ERROR]', e);
+//       res.status(500).json({ status: 'error', error: 'Erro interno no servidor' });
+//     }
+//   }
+// );
+
+// // ----------------------
+// // Login via API (Postman/SPA)
+// // ----------------------
+// router.post('/login', (req, res, next) => {
+//   handleLogin(req, res, next, true);
+// });
+
+// // ----------------------
+// // Rota /current
+// // ----------------------
+// router.get(
+//   '/current',
+//   passport.authenticate('jwt', { session: false }),
+//   (req, res) => {
+//     try {
+//       const { _id, first_name, last_name, email, role } = req.user;
+//       res.sendSuccess('Usuário autenticado', {
+//         user: { _id, first_name, last_name, email, role }
+//       });
+//     } catch (e) {
+//       console.error('[CURRENT USER ERROR]', e);
+//       res.status(500).json({ status: 'error', error: 'Erro ao recuperar dados do usuário' });
+//     }
+//   }
+// );
+
+// // ----------------------
+// // Logout
+// // ----------------------
+// router.get('/logout', (req, res) => {
+//   try {
+//     // Limpa cookie JWT com flags de segurança
+//     res.clearCookie('jwtCookieToken', {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: 'Strict'
+//     });
+
+//     // Resposta dinâmica para HTML vs API
+//     if (req.accepts('html')) {
+//       req.logout(() => res.redirect('/login'));
+//     } else {
+//       res.sendSuccess('Logout realizado com sucesso');
+//     }
+//   } catch (e) {
+//     console.error('[LOGOUT ERROR]', e);
+//     res.status(500).json({ status: 'error', error: 'Erro durante logout' });
+//   }
+// });
+
+// export default router;

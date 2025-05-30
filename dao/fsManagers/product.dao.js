@@ -1,4 +1,6 @@
-import ProductModel from '../models/Product.js';
+import ProductModel from '../../models/product.model.js';
+import mongoosePaginate from 'mongoose-paginate-v2';
+
 
 export default class ProductManager {
   // Adiciona um novo produto com validações
@@ -62,4 +64,12 @@ export default class ProductManager {
     if (!deleted) throw new Error("Produto não encontrado");
     return deleted;
   }
+
+  // Paginação de produtos com filtros e ordenação
+    async paginateProducts(filter = {}, options = {}) {
+      return await ProductModel.paginate(filter, options);
+
+  
+  }
 }
+

@@ -1,0 +1,28 @@
+<!-- Página de Login -->
+
+<h2>Login</h2>
+
+<!-- Formulário de login via POST para rota correta -->
+<form method="POST" action="/api/sessions/login/form">
+  <!-- Campo de email com validação HTML5 -->
+  <input 
+    name="email" 
+    type="email" 
+    placeholder="Email" 
+    required 
+  />
+
+  <!-- Campo de senha com ocultação -->
+  <input 
+    name="password" 
+    type="password" 
+    placeholder="Senha" 
+    required 
+  />
+
+  <!-- Botão de envio do formulário -->
+  <button type="submit">Entrar</button>
+</form>
+
+<!-- Link para página de registro -->
+<a href="/register">Criar conta</a>

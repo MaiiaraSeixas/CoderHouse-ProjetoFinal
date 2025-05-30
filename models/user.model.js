@@ -27,7 +27,15 @@ const userSchema = new mongoose.Schema({
   },
   avatar: {
     type: String    // URL da imagem do avatar/perfil
-  }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now // Data de criação do usuário, padrão é a data atual
+  },
+  cartId: {
+    type: mongoose.Schema.Types.ObjectId, // Referência ao carrinho de compras do usuário
+    ref: 'Cart' // Nome do modelo referenciado
+  },
 });
 
 // Cria o modelo User baseado no schema

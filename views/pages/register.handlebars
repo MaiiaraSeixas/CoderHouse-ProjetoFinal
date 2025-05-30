@@ -1,0 +1,44 @@
+<!-- Página de Registro -->
+
+<h2>Registro</h2>
+
+<!-- Formulário de cadastro via POST para rota do backend que lida com formulários -->
+<form method="POST" action="/api/sessions/register/form">
+  <!-- Campo para o primeiro nome -->
+  <input 
+    name="first_name" 
+    type="text" 
+    placeholder="Nome" 
+    required 
+  />
+
+  <!-- Campo para o sobrenome -->
+  <input 
+    name="last_name" 
+    type="text" 
+    placeholder="Sobrenome" 
+    required 
+  />
+
+  <!-- Campo para o email -->
+  <input 
+    name="email" 
+    type="email" 
+    placeholder="Email" 
+    required 
+  />
+
+  <!-- Campo para a senha -->
+  <input 
+    name="password" 
+    type="password" 
+    placeholder="Senha" 
+    required 
+  />
+
+  <!-- Botão de envio do formulário -->
+  <button type="submit">Cadastrar</button>
+</form>
+
+<!-- Link para página de login caso o usuário já tenha uma conta -->
+<a href="/login">Já tenho conta</a>
