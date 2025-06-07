@@ -18,11 +18,13 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.2.1",
     "mongoose-paginate-v2": "^1.9.1",
+    "nodemailer": "^7.0.3",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "socket.io": "^4.7.2",
+    "twilio": "^5.7.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

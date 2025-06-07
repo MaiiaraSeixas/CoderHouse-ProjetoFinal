@@ -14,7 +14,9 @@ import http from 'http';
 import exphbs from 'express-handlebars';
 
 // Middlewares e Configs
+import config from './config/config.js';'./config/passport.js';
 import { initializePassport } from '../config/passport.js';
+import passportConfig from '../config/passport.js';
 import responseMiddleware from '../middlewares/responseMiddleware.js';
 import { isAuthenticated } from '../middlewares/auth.js';
 import { errorHandler } from '../middlewares/errorHandler.js';
@@ -26,6 +28,8 @@ import productMongoRoutes from '../routes/products.mongo.js';
 import cartMongoRoutes from '../routes/carts.mongo.js';
 import cartRoutes from '../routes/carts.routes.js';
 import productsViewRouter from '../routes/products.view.js';
+import mailRoutes from './routes/mail.routes.js';
+import smsRoutes from './routes/sms.routes.js';
 
 // Modelos
 import ProductModel from '../models/product.model.js';
@@ -40,6 +44,7 @@ dotenv.config({ path: path.resolve(__dirname, './.env') });
 
 // Inicialização
 const app = express();
+const PORT = config.port;
 const server = http.createServer(app);
 const io = new Server(server);
 
@@ -93,6 +98,9 @@ app.use('/api/products', productMongoRoutes);
 app.use('/api/products/fs', productsRouter);
 // app.use('/api/carts', cartMongoRoutes);
 app.use('/api/carts', cartRoutes);
+app.use('/api/mail', mailRoutes);
+app.use('/api/sms', smsRoutes);
+
 
 // Rotas de Visualização
 app.use(
@@ -162,7 +170,6 @@ io.on('connection', socket => {
 app.use(errorHandler);
 
 // Start
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
