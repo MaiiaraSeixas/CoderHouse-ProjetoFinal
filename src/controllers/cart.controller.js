@@ -43,17 +43,114 @@ class CartController {
         }
     }
 
-    // ... outros métodos do controlador de carrinho
-    async getAllCarts(req, res, next) { /* Buscar todos os carrinhos */ }    
-    async createCart(req, res, next) { /* Criação de um novo carrinho */ }
-    async getCart(req, res, next) { /* Buscar carrinho por ID */ }
-    async updateProductQuantity(req, res, next) { /* Atualizar quantidade de produto no carrinho */ }
-    async removeProductFromCart(req, res, next) { /* Remover produto do carrinho */ }
-    async clearCart(req, res, next) { /* Esvaziar carrinho */ }
-    async deleteCart(req, res, next) { /* Excluir carrinho */ }
-    async addProductToCart(req, res, next) { /* Adicionar produto ao carrinho */ }
-}
+// Cria um novo carrinho
+    async createCart(req, res, next) {
+        try {
+            const newCart = await cartService.createCart();
+            res.status(201).send({ status: 'success', payload: newCart });
+        } catch (error) {
+            next(error);
+        }
+    }
 
+    // Busca um carrinho pelo ID
+    async getCart(req, res, next) {
+        try {
+            const { cid } = req.params;
+            const cart = await cartService.getCartById(cid);
+            if (!cart) {
+                return res.status(404).send({ status: 'error', message: 'Carrinho não encontrado' });
+            }
+            res.status(200).send({ status: 'success', payload: cart });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    // Adiciona um produto ao carrinho
+    async addProductToCart(req, res, next) {
+        try {
+            const { cid, pid } = req.params;
+            const { quantity = 1 } = req.body;
+            const updatedCart = await cartService.addProductToCart(cid, pid, quantity);
+            res.status(200).send({ status: 'success', payload: updatedCart });
+        } catch (error) {
+            next(error);
+        }
+    }
+    
+    // ... Implementação dos outros métodos para referência ...
+
+    async removeProductFromCart(req, res, next) {
+        try {
+            const { cid, pid } = req.params;
+            await cartService.removeProductFromCart(cid, pid);
+            res.status(200).send({ status: 'success', message: 'Produto removido do carrinho' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async clearCart(req, res, next) {
+        try {
+            const { cid } = req.params;
+            await cartService.clearCart(cid);
+            res.status(200).send({ status: 'success', message: 'Carrinho esvaziado com sucesso' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateProductQuantity(req, res, next) {
+        try {
+            const { cid, pid } = req.params;
+            const { quantity } = req.body;
+            await cartService.updateQuantity(cid, pid, quantity);
+            res.status(200).send({ status: 'success', message: 'Quantidade atualizada' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteCart(req, res, next) {
+        try {
+            const { cid } = req.params;
+            await cartService.deleteCart(cid);
+            res.status(200).send({ status: 'success', message: 'Carrinho deletado com sucesso' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getAllCarts(req, res, next) {
+        try {
+            const carts = await cartService.getAllCarts();
+            res.status(200).send({ status: 'success', payload: carts });
+        } catch (error) {
+            next(error);
+        }
+    }
+    // Outros métodos do controlador podem ser adicionados aqui
+
+    // Exemplo de método adicional para obter todos os produtos de um carrinho
+    async getProductsInCart(req, res, next) {
+        try {
+            const { cid } = req.params; // Obtém o ID do carrinho da URL
+            const cart = await cartService.getCartById(cid); // Busca o carrinho pelo ID
+            
+            if (!cart) {
+                return res.status(404).send({ status: 'error', message: 'Carrinho não encontrado' });
+            }
+
+            // Retorna os produtos contidos no carrinho
+            res.status(200).send({ status: 'success', payload: cart.products });
+        } catch (error) {
+            next(error); // Encaminha o erro para o middleware de tratamento de erros
+        }
+    
+
+    }
+}
 // Exporta uma instância única do controlador
 export const cartController = new CartController();
 

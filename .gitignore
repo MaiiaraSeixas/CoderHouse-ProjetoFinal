@@ -10,3 +10,12 @@ tests/
 *.test.js       
 coverage/       
 *.config.js
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db

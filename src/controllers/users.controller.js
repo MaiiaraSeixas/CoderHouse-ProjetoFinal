@@ -1,6 +1,6 @@
 // controllers/users.controller.js
 
-import userService from '../../services/user.service.js';
+import userService from '../services/user.service.js';
 
 // Controlador para obter todos os usuários
 export const getAllUsers = async (req, res) => {

@@ -75,7 +75,7 @@
 
           try {
             // Requisição para API de carrinhos
-            const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+            const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ quantity }) // Envia quantidade como JSON

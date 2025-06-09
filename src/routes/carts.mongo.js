@@ -1,23 +1,17 @@
-// routes/cart.routes.js
+// routes/carts.mongo.js
 
 import { Router } from 'express';
 import passport from 'passport';
-import CartModel from '../../models/cart.model.js';
-import handlePolicies from '../../middlewares/handlePolicies.js';
-import {
-  getCartById,
-  createCart,
-  addProductToCart,
-  clearCart,
-  removeProductFromCart
-} from '../controllers/cart.controller.js';
+import CartModel from '../models/cart.model.js';
+import handlePolicies from '../middlewares/handlePolicies.js';
+// 1. Importa o objeto 'cartController'
+import { cartController } from '../controllers/cart.controller.js';
 
 const router = Router();
 
 /**************************************/
-/*       ROTA PARA CARRINHO DO USUÁRIO       */
+/* ROTA PARA CARRINHO DO USUÁRIO       */
 /**************************************/
-// Retorna o carrinho do usuário autenticado (baseado no cartId do JWT)
 router.get(
   '/my-cart',
   passport.authenticate('jwt', { session: false }),
@@ -41,43 +35,38 @@ router.get(
 );
 
 /**************************************/
-/*       TODAS AS ROTAS PROTEGIDAS     */
-/*   Requerem autenticação de usuário  */
+/* TODAS AS ROTAS PROTEGIDAS     */
 /**************************************/
 
-// Rota GET para obter um carrinho específico por ID
+// 2. Chama as funções como métodos do objeto 'cartController'
 router.get(
-  '/:cid', // :cid = ID do carrinho
+  '/:cid',
   handlePolicies(['USER', 'PREMIUM']),
-  getCartById
+  cartController.getCart // Ajustado para o método correto no controller
 );
 
-// Rota POST para criar novo carrinho
 router.post(
   '/',
   handlePolicies(['USER', 'PREMIUM']),
-  createCart
+  cartController.createCart
 );
 
-// Rota POST para adicionar produto ao carrinho
 router.post(
   '/:cid/products/:pid',
   handlePolicies(['USER', 'PREMIUM']),
-  addProductToCart
+  cartController.addProductToCart
 );
 
-// Rota DELETE para remover carrinho completamente
 router.delete(
   '/:cid',
   handlePolicies(['USER', 'PREMIUM']),
-  clearCart
+  cartController.clearCart
 );
 
-// Rota DELETE para remover item específico do carrinho
 router.delete(
   '/:cid/product/:pid',
   handlePolicies(['USER', 'PREMIUM']),
-  removeProductFromCart
+  cartController.removeProductFromCart
 );
 
 export default router;

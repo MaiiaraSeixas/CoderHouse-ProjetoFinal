@@ -1,113 +1,77 @@
-<!-- ====== products.handlebars (Corrigido) ====== -->
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
   <title>Lista de Produtos</title>
-  <!-- Estilos personalizados para a página -->
   <style>
-    .product-item {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-
-    .pagination a,
-    .pagination span {
-      margin-right: 5px;
-      padding: 5px;
-      border: 1px solid #eee;
-    }
-
-    .pagination .current {
-      font-weight: bold;
-    }
+    .product-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    .pagination a, .pagination span { margin-right: 5px; padding: 5px; border: 1px solid #eee; }
+    .pagination .current { font-weight: bold; }
   </style>
 </head>
-
 <body>
   <h1>Lista de Produtos</h1>
 
-  <!-- Seção de informações do usuário logado -->
   {{#if user}}
   <div class="user-info">
     <p>👋 Bem-vindo, {{user.first_name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
-    <p><a href="/logout">Sair</a></p>
+    <p><a href="/api/sessions/logout">Sair</a></p>
   </div>
   {{/if}}
 
-  <!-- Lista de produtos -->
   <ul class="products-list">
     {{#each products}}
     <li class="product-item">
-      <!-- Detalhes do produto -->
       <h3>{{this.title}}</h3>
       <p><em>{{this.description}}</em></p>
       <p>Preço: R$ {{this.price}}</p>
       <p>Categoria: {{this.category}}</p>
-
-      <!-- Ações disponíveis para o produto -->
       <div class="product-actions">
         {{#if (gt this.stock 0)}}
-        <!-- Botão de adição ao carrinho -->
-        <button onclick="adicionarAoCarrinho('{{this._id}}')">Adicionar ao Carrinho</button>
+          <button onclick="adicionarAoCarrinho('{{this._id}}')">Adicionar ao Carrinho</button>
         {{else}}
-        <!-- Mensagem de estoque esgotado -->
-        <span style="color: red">Produto esgotado</span>
+          <span style="color: red">Produto esgotado</span>
         {{/if}}
-        <!-- Link para detalhes do produto -->
         <a href="/products/{{this._id}}/view">Ver Detalhes</a>
       </div>
     </li>
     {{else}}
-    <!-- Mensagem para lista vazia -->
     <li>Nenhum produto encontrado.</li>
     {{/each}}
   </ul>
 
-  <!-- Controle de paginação -->
-<div class="pagination">
-  {{#if prevLink}}
-    <a href="{{prevLink}}">Página Anterior</a>
-  {{/if}}
+  <div class="pagination">
+    {{#if prevLink}}
+      <a href="{{prevLink}}">Página Anterior</a>
+    {{/if}}
+    <span class="current-page">Página {{currentPage}} de {{totalPages}}</span>
+    {{#if nextLink}}
+      <a href="{{nextLink}}">Próxima Página</a>
+    {{/if}}
+  </div>
 
-  <span class="current-page">Página {{currentPage}} de {{totalPages}}</span>
-
-  {{#if nextLink}}
-    <a href="{{nextLink}}">Próxima Página</a>
-  {{/if}}
-</div>
-
-
-  <!-- Scripts de interação com o carrinho -->
   <script>
-
-    // Pega o cartId passado pelo backend (sessão)
-    const cartId = '{{user.cartId}}';
-
-    // Função para adicionar produto ao carrinho
+    // --- SCRIPT CORRIGIDO ---
     async function adicionarAoCarrinho(productId) {
-      try {
-        const quantity = 1; // Quantidade padrão
-        
-        if (!cartId || cartId === 'null') {
-          throw new Error('Carrinho não encontrado na sessão.');
-        }
+      // Lê a variável 'cartId' que foi renderizada diretamente no template.
+      const cartId = '{{cartId}}';
 
-        // Requisição para API de carrinhos
-        const response = await fetch(`/api/carts/${cartId}/products/${productId}`, {
+      if (!cartId) {
+        alert('Erro: ID do carrinho não encontrado. Tente fazer login novamente.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quantity })
+          body: JSON.stringify({ quantity: 1 })
         });
-
-        // Processamento da resposta
         const data = await response.json();
-        if (data && !data.error) {
-          alert('Produto adicionado ao carrinho!');
+        if (response.ok) {
+          alert('Produto adicionado ao carrinho com sucesso!');
         } else {
-          throw new Error(data.error || 'Erro desconhecido');
+          throw new Error(data.error || 'Falha ao adicionar produto');
         }
       } catch (err) {
         console.error('Erro:', err);
@@ -115,7 +79,5 @@
       }
     }
   </script>
-
 </body>
-
 </html>

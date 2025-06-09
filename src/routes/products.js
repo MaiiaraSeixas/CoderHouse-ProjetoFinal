@@ -9,8 +9,8 @@ import {
   createProduct,
   updateProduct,
   deleteProduct
-} from '../../controllers/products.controller.js'; // ✅ Caminho corrigido
-import handlePolicies from '../../middlewares/handlePolicies.js'; // ✅ Caminho também ajustado se estiver em mesma estrutura
+} from '../controllers/products.controller.js'; // ✅ Caminho corrigido
+import handlePolicies from '../middlewares/handlePolicies.js'; // ✅ Caminho também ajustado se estiver em mesma estrutura
 
 const router = Router();
 

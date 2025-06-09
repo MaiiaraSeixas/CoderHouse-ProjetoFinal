@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import passport from 'passport';
-import { generateToken } from '../../utils/jwt.js';
-import CartModel from '../../models/cart.model.js';
-import UserDTO from '../../dtos/user.dto.js';
+import { generateToken } from '../utils/jwt.js';
+import CartModel from '../models/cart.model.js';
+import UserDTO from '../dtos/user.dto.js';
 
 const router = Router();
 
@@ -131,7 +131,7 @@ router.get(
   (req, res) => {
     try {
       const safeUser = new UserDTO(req.user);
-      res.sendSuccess('Usuário autenticado', { user: safeUser });
+      res.sendSuccess({ message: 'Usuário autenticado', user: safeUser });
     } catch (e) {
       console.error('[CURRENT USER ERROR]', e);
       res.status(500).json({ status: 'error', error: 'Erro ao recuperar dados do usuário' });
@@ -160,5 +160,45 @@ router.get('/logout', (req, res) => {
     res.status(500).json({ status: 'error', error: 'Erro durante logout' });
   }
 });
+
+// --- ROTAS DE AUTENTICAÇÃO COM GITHUB (CORRIGIDAS) ---
+
+// 1. Inicia o fluxo de autenticação, redirecionando para o GitHub
+router.get('/github', passport.authenticate('github', { scope: ['user:email'], session: false }));
+
+// 2. Rota de callback que o GitHub chama após a autorização do usuário
+router.get(
+  '/githubcallback',
+  // O passport.authenticate('github') chama a estratégia. Se for bem-sucedida, o objeto 'user' é colocado em req.user.
+  passport.authenticate('github', { failureRedirect: '/login', session: false }),
+
+  // 3. Este handler é executado após a autenticação bem-sucedida.
+  (req, res) => {
+    // --- CORREÇÃO PRINCIPAL ---
+    // Criamos um objeto de payload limpo e explícito para garantir que o cartId está incluído.
+    const userPayload = {
+      _id: req.user._id,
+      first_name: req.user.first_name,
+      last_name: req.user.last_name,
+      email: req.user.email,
+      age: req.user.age,
+      cartId: req.user.cartId, // Este é o campo mais importante
+      role: req.user.role
+    };
+    
+    // Geramos o token com este payload limpo.
+    const token = generateToken(userPayload);
+
+    // Definimos o cookie no navegador.
+    res.cookie('jwtCookieToken', token, {
+      httpOnly: true,
+      maxAge: 3600000, // 1 hora
+      sameSite: 'Lax' // Necessário para redirecionamentos
+    });
+
+    // Finalmente, redirecionamos para a página de produtos.
+    res.redirect('/products');
+  }
+);
 
 export default router;

@@ -1,7 +1,7 @@
 // ===== ARQUIVO ATUALIZADO: services/cart.service.js =====
 // Lógica de compra implementada no serviço de carrinho.
 
-import { CartModel } from "../models/cart.model.js";         // Modelo de carrinho
+import  CartModel  from "../models/cart.model.js";         // Modelo de carrinho
 import { productService } from "./products.service.js";      // Serviço de produtos
 import { ticketService } from "./ticket.service.js";         // Serviço de tickets
 import MailService from './mail.service.js';                 // Serviço de envio de e-mails
@@ -83,11 +83,31 @@ class CartService {
 
     // ... Outros métodos do serviço de carrinho (addProductToCart, removeProduct, etc.)
     // Adiciona um produto ao carrinho
-    async addProductToCart(cartId, productId, quantity) { 
-        return await CartModel.updateOne(
-            { _id: cartId },
-            { $push: { products: { product: productId, quantity } } }
-        );
+    async addProductToCart(cartId, productId, quantity) {
+        const cart = await CartModel.findById(cartId);
+        if (!cart) {
+            throw new Error('Carrinho não encontrado');
+        }
+
+        // Procura o índice do produto no array do carrinho
+        const productIndex = cart.products.findIndex(p => p.product.toString() === productId);
+
+        if (productIndex > -1) {
+            // Se o produto já existe, incrementa a quantidade
+            await CartModel.updateOne(
+                { _id: cartId, 'products.product': productId },
+                { $inc: { 'products.$.quantity': quantity } }
+            );
+        } else {
+            // Se o produto não existe, adiciona ao carrinho
+            await CartModel.updateOne(
+                { _id: cartId },
+                { $push: { products: { product: productId, quantity: quantity } } }
+            );
+        }
+
+        // Retorna o carrinho atualizado para a resposta da API
+        return await this.getCartById(cartId);
     }
     // Atualiza a quantidade de um produto no carrinho
     async updateQuantity(cartId, productId, quantity) {

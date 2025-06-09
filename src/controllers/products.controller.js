@@ -1,12 +1,12 @@
 // controllers/products.controller.js
 
-import productService from '../../services/products.service.js';
+import {productService} from '../services/products.service.js';
 
 // Controlador para obter todos os produtos
 export const getAllProducts = async (req, res) => {
   try {
     // Chama o serviço para buscar todos os produtos
-    const products = await productService.getAllProducts();
+    const products = await productService.getProducts();
     
     // Retorna os produtos com status 200 (OK)
     res.sendSuccess({ products });
@@ -42,13 +42,13 @@ export const getProductById = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     // Chama o serviço para criar um novo produto com os dados do corpo da requisição
-    const newProduct = await productService.createProduct(req.body);
+    const newProduct = await productService.addProduct(req.body);
     
     // Retorna o novo produto criado com status 201 (Created)
-    res.sendSuccess({ product: newProduct });
+    res.status(201).send({ status: 'success', payload: { product: newProduct } });
   } catch (error) {
     // Log do erro e resposta de erro
-    req.logger.error(error);
+    console.error("Erro ao criar produto:", error);
     res.sendError('Erro ao criar produto', 500);
   }
 };

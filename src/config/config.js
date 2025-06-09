@@ -3,9 +3,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-/**
- * Centraliza todas as variáveis de ambiente com fallback seguro
- */
 export default {
   port: process.env.PORT || 3000,
   mongoUri: process.env.MONGO_URI,
@@ -15,6 +12,12 @@ export default {
   githubClientSecret: process.env.GITHUB_CLIENT_SECRET,
   githubCallbackUrl: process.env.GITHUB_CALLBACK_URL,
   cookieName: 'jwtCookieToken',
+  
+  // ADICIONE ESTE OBJETO PARA AS CONFIGURAÇÕES DE E-MAIL
+  mailing: {
+    service: process.env.MAIL_SERVICE || 'gmail',
+    port: process.env.MAIL_PORT || 587,
+    user: process.env.MAIL_USER,
+    password: process.env.MAIL_PASS
+  }
 };
-// Nota: Certifique-se de que as variáveis de ambiente estejam definidas no arquivo .env
-// e que o dotenv esteja configurado corretamente no início do seu app.js.

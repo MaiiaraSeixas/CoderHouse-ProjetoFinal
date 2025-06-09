@@ -1,7 +1,7 @@
 // ===== ARQUIVO ATUALIZADO: services/products.service.js =====
 // Serviço de produtos refatorado para usar o modelo Mongoose diretamente.
 
-import { ProductModel } from "../models/product.model.js"; // Importa o modelo de Produto
+import  ProductModel  from "../models/product.model.js"; // Importa o modelo de Produto
 
 class ProductService {
     // Método para buscar todos os produtos

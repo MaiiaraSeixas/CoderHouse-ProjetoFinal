@@ -15,25 +15,27 @@ import exphbs from 'express-handlebars';
 
 // Middlewares e Configs
 import config from './config/config.js';'./config/passport.js';
-import { initializePassport } from '../config/passport.js';
-import passportConfig from '../config/passport.js';
-import responseMiddleware from '../middlewares/responseMiddleware.js';
-import { isAuthenticated } from '../middlewares/auth.js';
-import { errorHandler } from '../middlewares/errorHandler.js';
+import { initializePassport } from './config/passport.js';
+// import passportConfig from './config/passport.js';
+import responseMiddleware from './middlewares/responseMiddleware.js';
+import { isAuthenticated } from './middlewares/auth.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 // Rotas
-import authRoutes from '../routes/auth.routes.js';
-import productsRouter from '../routes/products.js';
-import productMongoRoutes from '../routes/products.mongo.js';
-import cartMongoRoutes from '../routes/carts.mongo.js';
-import cartRoutes from '../routes/carts.routes.js';
-import productsViewRouter from '../routes/products.view.js';
+import authRoutes from './routes/auth.routes.js';
+import productsRouter from './routes/products.js';
+import productMongoRoutes from './routes/products.mongo.js';
+import cartMongoRoutes from './routes/carts.mongo.js';
+import cartRoutes from './routes/carts.routes.js';
+import productsViewRouter from './routes/products.view.js';
 import mailRoutes from './routes/mail.routes.js';
 import smsRoutes from './routes/sms.routes.js';
+import usersRoutes from './routes/users.routes.js';
+import { cartService } from './services/cart.service.js';
 
 // Modelos
-import ProductModel from '../models/product.model.js';
-import MessageModel from '../models/message.model.js';
+import ProductModel from './models/product.model.js';
+import MessageModel from './models/message.model.js';
 
 // Diretórios
 const __filename = fileURLToPath(import.meta.url);
@@ -55,7 +57,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Handlebars
 const hbs = exphbs.create({
-  layoutsDir: path.resolve(__dirname, '../views/layouts'),
+  layoutsDir: path.resolve(__dirname, './views/layouts'),
   defaultLayout: 'main',
   runtimeOptions: {
     allowProtoPropertiesByDefault: true,
@@ -70,7 +72,7 @@ const hbs = exphbs.create({
 });
 app.engine('handlebars', hbs.engine);
 app.set('view engine', 'handlebars');
-app.set('views', path.resolve(__dirname, '../views'));
+app.set('views', path.resolve(__dirname, './views'));
 
 // Middlewares globais
 app.use(cors());
@@ -96,11 +98,10 @@ app.use(passport.session());
 app.use('/api/sessions', authRoutes);
 app.use('/api/products', productMongoRoutes);
 app.use('/api/products/fs', productsRouter);
-// app.use('/api/carts', cartMongoRoutes);
 app.use('/api/carts', cartRoutes);
 app.use('/api/mail', mailRoutes);
 app.use('/api/sms', smsRoutes);
-
+app.use('/api/users', usersRoutes);
 
 // Rotas de Visualização
 app.use(
@@ -115,42 +116,31 @@ app.get('/', async (req, res) => {
   res.render('pages/home', { products });
 });
 
+app.get('/cart', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const cartId = req.user.cartId;
+    if (!cartId) {
+      return res.render('pages/cartDetails', { products: [], empty: true });
+    }
 
+    const cart = await cartService.getCartById(cartId);
 
-// ✅ Página de produtos (corrigida)
-// app.get('/products', passport.authenticate('jwt', { session: false }), async (req, res) => {
-//   try {
-//   console.log('[DEBUG] req.user:', req.user);
-//   console.log('[DEBUG] req.session:', req.session);
+    // Se o carrinho não for encontrado no banco de dados, renderiza a página como vazia
+    if (!cart) {
+      console.warn(`Carrinho com ID ${cartId} não foi encontrado.`);
+      return res.render('pages/cartDetails', { products: [], empty: true });
+    }
 
+    const isEmpty = !cart.products || cart.products.length === 0;
 
-//   const products = await ProductModel.find().lean();
-//   const user = req.user || null;
-//   const cartId = user?.cartId?.toString() || null;
+    // CORREÇÃO AQUI: Renderiza o template 'cartDetails.handlebars'
+    res.render('pages/cartDetails', { products: cart.products, empty: isEmpty });
 
-//   console.log('🛒 Produtos carregados:', products.length); // Verifica a quantidade de produtos
-//   console.log('📦 cartId enviado para a view:', cartId); // Verifica o ID do carrinho
-//   console.log('[DEBUG] user que será enviado para a view:', user);
-  
-
-
-//   res.render('pages/products', {
-//     user,
-//     cartId,
-//     products,
-//     currentPage: 1,
-//     totalPages: 1,
-//     hasPrevPage: false,
-//     hasNextPage: false,
-//     prevPage: null,
-//     nextPage: null,
-//     limit: products.length
-//   });
-//   } catch (err) {
-//     console.error('❌ Erro ao carregar os produtos:', err);
-//     res.status(500).json({ error: 'Erro ao carregar os produtos' });
-//   }
-// });
+  } catch (error) {
+    console.error("Erro ao carregar a página do carrinho:", error);
+    res.status(500).send("Erro ao carregar o carrinho.");
+  }
+});
 
 // Outras páginas
 app.get('/chat', (req, res) => res.render('pages/chat'));
@@ -170,6 +160,6 @@ io.on('connection', socket => {
 app.use(errorHandler);
 
 // Start
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

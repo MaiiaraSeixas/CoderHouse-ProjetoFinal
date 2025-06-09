@@ -1,10 +1,10 @@
 // controllers/auth.controller.js
 
-import UserModel from '../../models/user.model.js';
-import { createHash, isValidPassword } from '../../utils/cryptography.js';
+import UserModel from '../models/user.model.js';
+import { createHash, isValidPassword } from '../utils/cryptography.js';
 import { generateToken } from '../utils/jwt.js';
 import { cookieExtractor } from '../utils/cookieExtractor.js';
-import CartModel from '../../models/cart.model.js';
+import CartModel from '../models/cart.model.js';
 
 // ✅ REGISTRO DE USUÁRIO
 export const registerUser = async (req, res) => {

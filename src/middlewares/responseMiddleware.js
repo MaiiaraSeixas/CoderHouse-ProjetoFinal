@@ -9,8 +9,7 @@ export const responseMiddleware = (req, res, next) => {
    * Retorna sucesso com dados
    * @param {*} payload - dados de retorno
    */
-  console.log('[RESPONSE MIDDLEWARE] Ativado');
-  res.sendSuccess = (payload) => {
+    res.sendSuccess = (payload) => {
     res.status(200).json({ status: 'success', payload });
   };
 
