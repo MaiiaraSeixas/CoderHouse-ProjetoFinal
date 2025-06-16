@@ -1,6 +1,9 @@
 // controllers/products.controller.js
 
 import {productService} from '../services/products.service.js';
+import CustomError from '../utils/errors/CustomError.js';
+import EErrors from '../utils/errors/errorDictionary.js';
+import { generateProductErrorInfo } from '../utils/errors/info.js';
 
 // Controlador para obter todos os produtos
 export const getAllProducts = async (req, res) => {
@@ -38,18 +41,39 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// Controlador para criar um novo produto
-export const createProduct = async (req, res) => {
+// Controlador `createProduct` modificado
+// A assinatura da função agora inclui `next`, que é usado para passar
+// o controle para o próximo middleware na cadeia (neste caso, o nosso errorHandler).
+export const createProduct = async (req, res, next) => {
   try {
-    // Chama o serviço para criar um novo produto com os dados do corpo da requisição
-    const newProduct = await productService.addProduct(req.body);
+    const { title, description, code, price, stock, category } = req.body;
+
+    // 2.1: Bloco de Validação
+    // Verificamos se algum dos campos obrigatórios está faltando.
+    if (!title || !description || !code || !price || !stock || !category) {
+        // 2.2: Lançando o Erro Personalizado
+        // Se a validação falhar, em vez de um `res.send()`, nós usamos
+        // `CustomError.createError()` para construir e lançar um erro estruturado.
+        // O `throw` irá parar a execução aqui e o `catch` abaixo irá capturá-lo.
+        CustomError.createError({
+            name: "Product Creation Error",
+            cause: generateProductErrorInfo({ title, description, code, price, stock, category }),
+            message: "Erro ao tentar criar um produto. Dados incompletos.",
+            code: EErrors.PRODUCT_CREATION_ERROR
+        });
+    }
+
+    // Se a validação passar, o código continua normalmente.
+    const newProductData = { title, description, code, price, stock, category, thumbnails: req.body.thumbnails || [] };
+    const newProduct = await productService.addProduct(newProductData);
     
-    // Retorna o novo produto criado com status 201 (Created)
     res.status(201).send({ status: 'success', payload: { product: newProduct } });
   } catch (error) {
-    // Log do erro e resposta de erro
-    console.error("Erro ao criar produto:", error);
-    res.sendError('Erro ao criar produto', 500);
+    // 2.3: Captura e Encaminhamento do Erro
+    // Qualquer erro lançado no bloco `try` (seja o nosso erro personalizado ou um
+    // erro do banco de dados) será capturado aqui. `next(error)` então passa
+    // esse objeto de erro diretamente para o nosso `errorHandler`.
+    next(error);
   }
 };
 
