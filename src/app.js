@@ -13,6 +13,7 @@ import MongoStore from 'connect-mongo';
 import { Server } from 'socket.io';
 import http from 'http';
 import exphbs from 'express-handlebars';
+import logger from './utils/logger.js';
 
 // Middlewares e Configs
 import config from './config/config.js';
@@ -81,6 +82,15 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, './public')));
 app.use(responseMiddleware);
 
+// --- MIDDLEWARE PARA INJETAR O LOGGER ---
+// Adiciona o logger a todas as requisições para fácil acesso
+app.use((req, res, next) => {
+  req.logger = logger;
+  // Log de alto valor: registra cada requisição HTTP recebida
+  req.logger.http(`${req.method} em ${req.url} - ${new Date().toLocaleTimeString()}`);
+  next();
+});
+
 // Sessão e Passport
 app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
@@ -102,6 +112,18 @@ app.use('/api/mail', mailRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/mockingproducts', mockingRoutes);
+
+// --- ROTA DE TESTE DO LOGGER ---
+app.get('/loggerTest', (req, res) => {
+  req.logger.fatal('Este é um log fatal de teste!');
+  req.logger.error('Este é um log de erro de teste!');
+  req.logger.warning('Este é um log de aviso de teste!');
+  req.logger.info('Este é um log de informação de teste!');
+  req.logger.http('Este é um log http de teste!');
+  req.logger.debug('Este é um log de debug de teste! (Só deve aparecer em desenvolvimento)');
+
+  res.send('Logs de teste enviados! Verifique o console e, em produção, o arquivo errors.log.');
+});
 
 // Rotas de Visualização
 app.use(
@@ -141,7 +163,8 @@ app.get('/register', (req, res) => res.render('pages/register'));
 
 // WebSocket
 io.on('connection', socket => {
-  console.log('🔌 Usuário conectado');
+  // Usamos o logger global aqui, pois sockets não passam por middlewares Express
+  logger.info('🔌 Usuário conectado via WebSocket');
   socket.on('chatMessage', async data => {
     await MessageModel.create(data);
     io.emit('chatMessage', data);
@@ -153,5 +176,8 @@ app.use(errorHandler);
 
 // Start
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  logger.info(`🚀 Servidor rodando na porta ${PORT}`);
+  logger.info(`🔗 Ambiente atual: ${process.env.NODE_ENV || 'development'}`);
 });
+
+
