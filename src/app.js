@@ -14,6 +14,9 @@ import { Server } from 'socket.io';
 import http from 'http';
 import exphbs from 'express-handlebars';
 import logger from './utils/logger.js';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUiExpress from 'swagger-ui-express';
+
 
 // Middlewares e Configs
 import config from './config/config.js';
@@ -91,6 +94,33 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- Configuração do Swagger ---
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.1',
+        info: {
+            title: 'Documentação da API de E-commerce',
+            description: 'API para gerir produtos e carrinhos de um e-commerce, desenvolvida para o projeto final do curso de Backend da CoderHouse.'
+        },
+        // ATUALIZAÇÃO: Define o esquema de segurança JWT
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                    description: 'Insira o token JWT obtido no login'
+                }
+            }
+        },
+        security: [{
+            bearerAuth: []
+        }]
+    },
+    apis: [`${__dirname}/docs/**/*.yaml`]
+};
+const specs = swaggerJsdoc(swaggerOptions);
+
 // Sessão e Passport
 app.use(session({
   store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
@@ -104,6 +134,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // --- REGISTRO DAS ROTAS ---
+app.use('/api-docs', swaggerUiExpress.serve, swaggerUiExpress.setup(specs));
 app.use('/api/sessions', authRoutes);
 app.use('/api/products', productMongoRoutes);
 app.use('/api/products/fs', productsRouter);
@@ -178,6 +209,7 @@ app.use(errorHandler);
 server.listen(PORT, () => {
   logger.info(`🚀 Servidor rodando na porta ${PORT}`);
   logger.info(`🔗 Ambiente atual: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`📚 Documentação da API disponível em: http://localhost:${PORT}/api-docs`);
 });
 
 

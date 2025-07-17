@@ -1,0 +1,219 @@
+components:
+  schemas:
+    ProductInCart:
+      type: object
+      properties:
+        product:
+          type: string
+          description: ID do produto.
+        quantity:
+          type: integer
+          description: Quantidade do produto no carrinho.
+      example:
+        product: "64a3b4f0e1b2c3d4e5f6a7b8"
+        quantity: 2
+    Cart:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: ID gerado pelo MongoDB para o carrinho.
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductInCart'
+      example:
+        _id: "64a3b5c0e1b2c3d4e5f6a7c9"
+        products:
+          - product: "64a3b4f0e1b2c3d4e5f6a7b8"
+            quantity: 2
+          - product: "64a3b4f0e1b2c3d4e5f6a7b9"
+            quantity: 1
+  requestBodies:
+    UpdateCartProducts:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductInCart'
+
+paths:
+  /api/carts:
+    post:
+      summary: Cria um novo carrinho vazio
+      tags:
+        - Carts
+      # ATUALIZAÇÃO: Adiciona o requisito de segurança
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Carrinho criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '401':
+          description: Não autorizado. É necessário um token JWT válido.
+        '500':
+          description: Erro interno do servidor.
+
+  /api/carts/{cid}:
+    get:
+      summary: Obtém um carrinho específico pelo seu ID
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho a ser consultado.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso. Retorna os dados do carrinho com os produtos populados.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+    put:
+      summary: Atualiza o carrinho com um novo array de produtos
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho a ser atualizado.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/requestBodies/UpdateCartProducts'
+      responses:
+        '200':
+          description: Carrinho atualizado com sucesso.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+    delete:
+      summary: Remove todos os produtos do carrinho
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho a ser esvaziado.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Todos os produtos foram removidos do carrinho.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+  /api/carts/{cid}/product/{pid}:
+    post:
+      summary: Adiciona um produto a um carrinho (ou incrementa a quantidade)
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho.
+          schema:
+            type: string
+        - name: pid
+          in: path
+          required: true
+          description: ID do produto a ser adicionado.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Produto adicionado/atualizado no carrinho com sucesso.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho ou produto não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+    delete:
+      summary: Remove um produto específico de um carrinho
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho.
+          schema:
+            type: string
+        - name: pid
+          in: path
+          required: true
+          description: ID do produto a ser removido.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Produto removido do carrinho com sucesso.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho ou produto não encontrado no carrinho.
+        '500':
+          description: Erro interno do servidor.
+          
+  /api/carts/{cid}/purchase:
+    post:
+      summary: Finaliza a compra de um carrinho
+      tags:
+        - Carts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          description: ID do carrinho para finalizar a compra.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Compra finalizada com sucesso. Retorna o ticket gerado e os produtos que não puderam ser comprados por falta de estoque.
+        '401':
+          description: Não autorizado.
+        '404':
+          description: Carrinho não encontrado.
+        '500':
+          description: Erro interno do servidor.

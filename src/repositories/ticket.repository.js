@@ -1,5 +1,5 @@
 import ticketDAO from '../daos/mongo/ticket.dao.js';
-import TicketDTO from '../dtos/ticket.dto.js';
+import TicketDTO from '../dtos/TicketDTO.js';
 
 export default class TicketRepository {
   async create(ticketData) {

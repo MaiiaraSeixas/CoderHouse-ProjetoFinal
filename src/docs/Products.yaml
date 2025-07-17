@@ -1,0 +1,201 @@
+components:
+  schemas:
+    # Esquema para um produto individual
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: ID gerado pelo MongoDB para o produto.
+        title:
+          type: string
+          description: Título do produto.
+        description:
+          type: string
+          description: Descrição detalhada do produto.
+        price:
+          type: number
+          description: Preço do produto.
+        code:
+          type: string
+          description: Código único de identificação do produto.
+        stock:
+          type: integer
+          description: Quantidade do produto em estoque.
+        category:
+          type: string
+          description: Categoria à qual o produto pertence.
+        status:
+          type: boolean
+          description: Status do produto (true para ativo, false para inativo).
+        thumbnails:
+          type: array
+          items:
+            type: string
+          description: Lista de URLs das imagens do produto.
+      example:
+        _id: "64a3b4f0e1b2c3d4e5f6a7b8"
+        title: "Teclado Mecânico Gamer"
+        description: "Teclado com switches blue e iluminação RGB."
+        price: 350.50
+        code: "TEC-GAMER-001"
+        stock: 50
+        category: "Periféricos"
+        status: true
+        thumbnails: ["url.com/imagem1.jpg", "url.com/imagem2.jpg"]
+
+    # Esquema para criar um novo produto (sem o _id)
+    NewProduct:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        code:
+          type: string
+        stock:
+          type: integer
+        category:
+          type: string
+      required:
+        - title
+        - description
+        - price
+        - code
+        - stock
+        - category
+
+paths:
+  /api/products:
+    get:
+      summary: Lista todos os produtos com paginação
+      tags:
+        - Products
+      parameters:
+        - name: limit
+          in: query
+          description: Número de produtos por página.
+          schema:
+            type: integer
+            default: 10
+        - name: page
+          in: query
+          description: Número da página a ser retornada.
+          schema:
+            type: integer
+            default: 1
+        - name: sort
+          in: query
+          description: Ordenação do preço ('asc' ou 'desc').
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: Filtro por categoria ou status.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso. Retorna uma lista paginada de produtos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '500':
+          description: Erro interno do servidor.
+
+    post:
+      summary: Cria um novo produto
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewProduct'
+      responses:
+        '201':
+          description: Produto criado com sucesso.
+        '400':
+          description: Erro de validação. Dados do produto inválidos ou código já existente.
+        '500':
+          description: Erro interno do servidor.
+
+  /api/products/{pid}:
+    get:
+      summary: Obtém um produto específico pelo seu ID
+      tags:
+        - Products
+      parameters:
+        - name: pid
+          in: path
+          required: true
+          description: ID do produto a ser consultado.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso. Retorna os dados do produto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Produto não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+    put:
+      summary: Atualiza um produto pelo seu ID
+      tags:
+        - Products
+      parameters:
+        - name: pid
+          in: path
+          required: true
+          description: ID do produto a ser atualizado.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewProduct' # Pode reutilizar ou criar um schema de atualização
+      responses:
+        '200':
+          description: Produto atualizado com sucesso.
+        '404':
+          description: Produto não encontrado.
+        '500':
+          description: Erro interno do servidor.
+
+    delete:
+      summary: Deleta um produto pelo seu ID
+      tags:
+        - Products
+      parameters:
+        - name: pid
+          in: path
+          required: true
+          description: ID do produto a ser deletado.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Produto deletado com sucesso.
+        '404':
+          description: Produto não encontrado.
+        '500':
+          description: Erro interno do servidor.

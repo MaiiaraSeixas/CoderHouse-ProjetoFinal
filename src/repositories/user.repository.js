@@ -1,5 +1,5 @@
 import userDAO from '../daos/mongo/user.dao.js';
-import UserDTO from '../dtos/user.dto.js';
+import UserDTO from '../dtos/UserDTO.js';
 
 export default class UserRepository {
   async getById(id) {

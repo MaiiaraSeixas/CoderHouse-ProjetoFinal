@@ -2,7 +2,7 @@ import { Router } from 'express';
 import passport from 'passport';
 import { generateToken } from '../utils/jwt.js';
 import CartModel from '../models/cart.model.js';
-import UserDTO from '../dtos/user.dto.js';
+import UserDTO from '../dtos/userDTO.js';
 
 const router = Router();
 
