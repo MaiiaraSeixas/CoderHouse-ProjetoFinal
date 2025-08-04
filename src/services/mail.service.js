@@ -4,13 +4,14 @@ import config from '../config/config.js';
 // Classe para gerenciar o serviço de e-mail
 export default class MailService {
   constructor() {
-    // Configuração do transporter do nodemailer com as credenciais do ambiente
+    // **CORREÇÃO APLICADA AQUI**
+    // Lendo as variáveis diretamente do objeto config, sem o aninhamento "mailing"
     this.transporter = nodemailer.createTransport({
-      service: config.mailing.service,
-      port: config.mailing.port,
+      service: 'gmail', // Serviço pode ser fixo ou vir do .env se necessário
+      port: 587,
       auth: {
-        user: config.mailing.user,
-        pass: config.mailing.password,
+        user: config.MAIL_USER,
+        pass: config.MAIL_PASS,
       },
     });
   }

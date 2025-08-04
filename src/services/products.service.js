@@ -34,6 +34,11 @@ class ProductService {
     async deleteProduct(id) {
         return await this.repository.deleteProduct(id);
     }
+
+    // Método assíncrono para atualizar o estoque de um produto específico, identificado por `id`, com o novo valor `newStock`
+    async updateProductStock(id, newStock) {
+        return await this.repository.updateProductStock(id, newStock);
+    }
 }
 
 // Cria uma instância única da classe ProductService e a exporta para ser usada em outras partes da aplicação

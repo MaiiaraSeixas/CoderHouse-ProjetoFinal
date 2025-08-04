@@ -46,6 +46,13 @@ class ProductRepository {
   async deleteProduct(id) {
     return await this.model.findByIdAndDelete(id);
   }
+
+  // NOVO MÉTODO ADICIONADO AQUI
+  // Método para atualizar o estoque de um produto específico
+  // identificado por `id`, com o novo valor `newStock`
+    async updateProductStock(id, newStock) {
+    return await this.model.findByIdAndUpdate(id, { $set: { stock: newStock } }, { new: true });
+  }
 }
 
 export const productRepository = new ProductRepository();

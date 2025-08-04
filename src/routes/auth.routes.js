@@ -105,8 +105,10 @@ router.post(
   passport.authenticate('register', { session: false }),
   (req, res) => {
     try {
-      res.sendSuccess('Usuário registrado com sucesso', {
-        user: new UserDTO(req.user),
+      // CORREÇÃO: Usar res.sendCreated com um único objeto de payload
+      res.sendCreated({
+        message: 'Usuário registrado com sucesso',
+        user: new UserDTO(req.user)
       });
     } catch (e) {
       console.error('[REGISTER API ERROR]', e);

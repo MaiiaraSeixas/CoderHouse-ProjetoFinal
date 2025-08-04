@@ -2,6 +2,9 @@
 
 // CORREÇÃO: Removemos as chaves {} do import para usar o export default do service.
 import { productService } from '../services/products.service.js';
+import CustomError from '../utils/errors/CustomError.js';
+import EErrors from '../utils/errors/errorDictionary.js';
+import { generateProductErrorInfo } from '../utils/errors/info.js';
 
 /**
  * Classe controladora para gerenciar as requisições relacionadas a produtos.
@@ -16,16 +19,28 @@ class ProductsController {
 	 */
 
 
-	// CORREÇÃO: Renomeado de 'addProduct' para 'createProduct' para corresponder às rotas.
-	async createProduct(req, res, next) {
-		try {
-			// A lógica interna continua chamando o método 'addProduct' do serviço, o que está correto.
-			const newProduct = await productService.addProduct(req.body);
-			res.status(201).json({ status: 'success', payload: newProduct });
-		} catch (error) {
-			next(error);
-		}
-	}
+  // CORREÇÃO: Renomeado de 'addProduct' para 'createProduct' para corresponder às rotas.
+  async createProduct(req, res, next) {
+    try {
+      // 2. Adicionar bloco de validação
+      const { title, description, code, price, stock, category } = req.body;
+      if (!title || !description || !code || !price || !stock || !category) {
+        // Se algum campo estiver faltando, lança nosso erro customizado
+        CustomError.createError({
+          name: 'Erro de Criação de Produto',
+          cause: generateProductErrorInfo(req.body),
+          message: 'Erro ao tentar criar o produto. Dados incompletos.',
+          code: EErrors.PRODUCT_CREATION_ERROR
+        });
+      }
+
+      const newProduct = await productService.addProduct(req.body);
+      res.status(201).json({ status: 'success', payload: newProduct });
+    } catch (error) {
+      // 3. Passa o erro (seja o nosso customizado ou outro) para o errorHandler
+      next(error);
+    }
+  }
 
 	async getProducts(req, res, next) {
 		try {

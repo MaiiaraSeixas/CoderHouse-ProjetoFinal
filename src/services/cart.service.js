@@ -1,143 +1,130 @@
-// ===== ARQUIVO ATUALIZADO: services/cart.service.js =====
-// Lógica de compra implementada no serviço de carrinho.
-
-import  CartModel  from "../models/cart.model.js";         // Modelo de carrinho
-import { productService } from "./products.service.js";      // Serviço de produtos
-import { ticketService } from "./ticket.service.js";         // Serviço de tickets
-import MailService from './mail.service.js';                 // Serviço de envio de e-mails
+// src/services/cart.service.js
+// Importa o model do carrinho, os serviços de produtos, ticket e email.
+import CartModel from "../models/cart.model.js";
+import { productService } from "./products.service.js";
+import { ticketService } from "./ticket.service.js";
+import MailService from './mail.service.js';
 
 class CartService {
-    // Cria um novo carrinho vazio
-    async createCart() {
-        return await CartModel.create({ products: [] });
+  // Cria um carrinho vazio no banco de dados
+  async createCart() {
+    return await CartModel.create({ products: [] });
+  }
+
+  // Busca um carrinho pelo ID e popula os dados completos dos produtos
+  async getCartById(id) {
+    return await CartModel.findById(id).populate('products.product').lean();
+  }
+
+  // ===============================
+  // LÓGICA DE FINALIZAÇÃO DE COMPRA (CORRIGIDA)
+  // ===============================
+  async purchaseCart(cartId, user) {
+    const mailService = new MailService();  // Instancia o serviço de e-mail
+    const cart = await this.getCartById(cartId); // Busca o carrinho com os produtos populados
+    if (!cart) throw new Error('Carrinho não encontrado');
+
+    const productsToPurchase = [];       // Produtos que podem ser comprados (estoque suficiente)
+    const productsNotPurchased = [];     // Produtos que não têm estoque
+    let totalAmount = 0;                 // Valor total da compra
+
+    // Itera sobre os produtos do carrinho
+    for (const item of cart.products) {
+      // Se o produto existe e o estoque é suficiente
+      if (item.product && item.product.stock >= item.quantity) {
+        totalAmount += item.quantity * item.product.price;
+        productsToPurchase.push(item);
+      } else {
+        productsNotPurchased.push(item);
+      }
     }
 
-    // Busca um carrinho pelo ID e carrega os dados completos dos produtos com populate
-    async getCartById(id) {
-        return await CartModel.findById(id).populate('products.product').lean();
-    }
-    
-    // Lógica principal de finalização da compra
-    async purchaseCart(cartId, user) {
-        const mailService = new MailService(); // Instancia o serviço de email
-        const cart = await this.getCartById(cartId); // Recupera o carrinho completo
+    let ticket = null;
 
-        if (!cart) {
-            throw new Error('Carrinho não encontrado');
-        }
+    // Se há produtos compráveis, gera o ticket
+    if (productsToPurchase.length > 0) {
+      // Atualiza o estoque dos produtos comprados
+      for (const item of productsToPurchase) {
+        const newStock = item.product.stock - item.quantity;
+        await productService.updateProductStock(item.product._id, newStock);
+      }
 
-        // Inicializa variáveis para controle da compra
-        const productsToPurchase = [];            // Produtos com estoque suficiente
-        const productsNotPurchasedIds = [];       // Produtos sem estoque suficiente
-        let totalAmount = 0;                      // Valor total da compra
+      // Cria o ticket da compra
+      const ticketData = { amount: totalAmount, purchaser: user.email };
+      ticket = await ticketService.createTicket(ticketData);
 
-        // Itera sobre os produtos do carrinho
-        for (const item of cart.products) {
-            if (item.product && item.quantity) {
-                const productFromDB = await productService.getProductById(item.product._id);
-                
-                if (productFromDB.stock >= item.quantity) {
-                    // Produto disponível em estoque
-                    productsToPurchase.push(item);
-                    totalAmount += item.quantity * productFromDB.price;
-                    
-                    // Atualiza o estoque
-                    const newStock = productFromDB.stock - item.quantity;
-                    await productService.updateProductStock(productFromDB._id, newStock);
-                } else {
-                    // Produto fora de estoque
-                    productsNotPurchasedIds.push(item.product._id.toString());
-                }
-            }
-        }
+      // Atualiza o carrinho removendo os produtos que foram comprados
+      await CartModel.updateOne({ _id: cartId }, { $set: { products: productsNotPurchased } });
 
-        let ticket = null;
-
-        // Se houver produtos comprados com sucesso, gera o ticket
-        if (productsToPurchase.length > 0) {
-            const ticketData = {
-                amount: totalAmount,
-                purchaser: user.email,
-            };
-            ticket = await ticketService.createTicket(ticketData); // Cria o ticket de compra
-            
-            // Remove do carrinho os produtos comprados com sucesso
-            await CartModel.updateOne(
-                { _id: cartId },
-                {
-                    $set: {
-                        products: cart.products.filter(item =>
-                            productsNotPurchasedIds.includes(item.product._id.toString())
-                        )
-                    }
-                }
-            );
-
-            // Envia email de confirmação da compra
-            await mailService.sendPurchaseConfirmation(user.email, ticket);
-        }
-
-        // Retorna o ticket gerado e os produtos que não foram comprados
-        return { ticket, productsNotPurchased: productsNotPurchasedIds };
+      // Envia e-mail de confirmação de compra
+      await mailService.sendPurchaseConfirmation(user.email, ticket);
     }
 
-    // ... Outros métodos do serviço de carrinho (addProductToCart, removeProduct, etc.)
-    // Adiciona um produto ao carrinho
-    async addProductToCart(cartId, productId, quantity) {
-        const cart = await CartModel.findById(cartId);
-        if (!cart) {
-            throw new Error('Carrinho não encontrado');
-        }
+    // Garante que a lista de produtos não comprados contenha apenas IDs válidos
+    const notPurchasedIds = productsNotPurchased
+      .filter(item => item.product)
+      .map(item => item.product._id.toString());
 
-        // Procura o índice do produto no array do carrinho
-        const productIndex = cart.products.findIndex(p => p.product.toString() === productId);
+    // Retorna o ticket gerado (se houver) e os produtos não comprados
+    return {
+      ticket,
+      productsNotPurchased: notPurchasedIds
+    };
+  }
 
-        if (productIndex > -1) {
-            // Se o produto já existe, incrementa a quantidade
-            await CartModel.updateOne(
-                { _id: cartId, 'products.product': productId },
-                { $inc: { 'products.$.quantity': quantity } }
-            );
-        } else {
-            // Se o produto não existe, adiciona ao carrinho
-            await CartModel.updateOne(
-                { _id: cartId },
-                { $push: { products: { product: productId, quantity: quantity } } }
-            );
-        }
+  // Adiciona um produto ao carrinho (ou incrementa a quantidade se já existir)
+  async addProductToCart(cartId, productId, quantity) {
+    const cart = await CartModel.findById(cartId);
+    if (!cart) throw new Error('Carrinho não encontrado');
 
-        // Retorna o carrinho atualizado para a resposta da API
-        return await this.getCartById(cartId);
+    // Converte o ID para string para evitar falhas de comparação
+    const productIdStr = productId.toString();
+
+    // Procura o produto no carrinho
+    const productIndex = cart.products.findIndex(p => p.product.toString() === productIdStr);
+
+    if (productIndex > -1) {
+      // Se já existe, apenas incrementa a quantidade
+      await CartModel.updateOne(
+        { _id: cartId, 'products.product': productIdStr },
+        { $inc: { 'products.$.quantity': quantity } }
+      );
+    } else {
+      // Caso contrário, adiciona o novo produto
+      await CartModel.updateOne(
+        { _id: cartId },
+        { $push: { products: { product: productIdStr, quantity: quantity } } }
+      );
     }
-    // Atualiza a quantidade de um produto no carrinho
-    async updateQuantity(cartId, productId, quantity) {
-        return await CartModel.updateOne(
-            { _id: cartId, "products.product": productId },
-            { $set: { "products.$.quantity": quantity } }
-        );
-    }
-    // Remove um produto do carrinho
-    async removeProductFromCart(cartId, productId) {
-        return await CartModel.updateOne(
-            { _id: cartId },
-            { $pull: { products: { product: productId } } }
-        );
-    }
-    // Limpa todos os produtos do carrinho
-    async clearCart(cartId) {
-        return await CartModel.updateOne(
-            { _id: cartId },
-            { $set: { products: [] } }
-        );
-    }
-    // Deleta o carrinho pelo ID
-    async deleteCart(cartId) {
-        return await CartModel.deleteOne({ _id: cartId });
-    }
-    // Busca todos os carrinhos (opcional, dependendo da necessidade)
-    async getAllCarts() {
-        return await CartModel.find({}).populate('products.product').lean();
-    } 
+
+    // Retorna o carrinho atualizado
+    return await this.getCartById(cartId);
+  }
+
+  // Atualiza diretamente a quantidade de um produto no carrinho
+  async updateQuantity(cartId, productId, quantity) {
+    return await CartModel.updateOne(
+      { _id: cartId, "products.product": productId },
+      { $set: { "products.$.quantity": quantity } }
+    );
+  }
+
+  // Remove um produto específico do carrinho
+  async removeProductFromCart(cartId, productId) {
+    return await CartModel.updateOne(
+      { _id: cartId },
+      { $pull: { products: { product: productId } } }
+    );
+  }
+
+  // Remove todos os produtos do carrinho
+  async clearCart(cartId) {
+    return await CartModel.updateOne(
+      { _id: cartId },
+      { $set: { products: [] } }
+    );
+  }
 }
 
-export const cartService = new CartService(); // Exporta uma instância única do serviço
+// Exporta uma instância única do serviço para ser usada no app
+export const cartService = new CartService();

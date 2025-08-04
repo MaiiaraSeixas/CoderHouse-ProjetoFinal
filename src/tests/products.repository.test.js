@@ -1,73 +1,91 @@
 // src/tests/products.repository.test.js
 
+// Importa o Mongoose para manipular conexão com MongoDB
 import mongoose from 'mongoose';
+// Importa o Chai para realizar asserções nos testes
 import { expect } from 'chai';
+// Importa o repositório que será testado
 import { productRepository } from '../repositories/product.repository.js';
+// Importa as configurações, incluindo a URL de teste do MongoDB
 import config from '../config/config.js';
 
-// Conecta-se a um banco de dados de teste antes de iniciar os testes
-before(async function() {
-    // Aumentamos o timeout para a conexão inicial para 10 segundos (10000ms)
-    this.timeout(10000); 
-    if (!config.MONGO_URL_TEST) {
-        throw new Error("MONGO_URL_TEST não está definida no arquivo .env");
-    }
-    await mongoose.connect(config.MONGO_URL_TEST);
+// Hook que roda antes de todos os testes
+before(async function () {
+	this.timeout(10000); // Tempo maior para conectar ao banco
+	// Verifica se a URL de teste foi definida
+	if (!config.MONGO_URL_TEST) {
+		throw new Error("MONGO_URL_TEST não está definida no arquivo .env");
+	}
+	// Conecta ao banco de dados de teste
+	await mongoose.connect(config.MONGO_URL_TEST);
 });
 
-// Limpa a coleção de produtos antes de cada teste
+// Hook que roda antes de cada teste
 beforeEach(async function () {
-    // Aumentamos o timeout para a limpeza da coleção para 10 segundos
-    this.timeout(10000);
-    await mongoose.connection.collection('products').deleteMany({});
+	this.timeout(10000); // Tempo maior para evitar timeout em ambientes lentos
+	// Limpa a coleção de produtos antes de cada teste
+	await mongoose.connection.collection('products').deleteMany({});
 });
 
-// Desconecta do banco de dados após todos os testes
+// Hook que roda após todos os testes
 after(async () => {
-    await mongoose.connection.close();
+	// Fecha a conexão com o banco após a execução dos testes
+	await mongoose.connection.close();
 });
 
+// Bloco principal que descreve os testes do repositório de produtos
 describe('Teste de Unidade do Repositório de Produtos', () => {
-    
-    it('Deve retornar uma lista de produtos paginada', async () => {
-        const result = await productRepository.getProducts({ page: 1, limit: 10 });
-        
-        expect(result).to.be.an('object');
-        expect(result).to.have.property('docs');
-        expect(result.docs).to.be.an('array');
-    });
 
-    it('Deve adicionar um produto ao banco de dados com sucesso', async () => {
-        const productMock = {
-            title: "Produto Repo Test",
-            description: "Descrição do teste de repositório",
-            code: "REPO-TEST-01",
-            price: 200,
-            stock: 10,
-            category: "Repo Test"
-        };
+	// Teste: retornar lista de produtos paginada
+	it('Deve retornar uma lista de produtos paginada', async function () {
+		this.timeout(5000);
+		const result = await productRepository.getProducts({ page: 1, limit: 10 });
 
-        const newProduct = await productRepository.addProduct(productMock);
+		// Verifica se o resultado é um objeto e possui o campo 'docs' com um array
+		expect(result).to.be.an('object');
+		expect(result).to.have.property('docs');
+		expect(result.docs).to.be.an('array');
+	});
 
-        expect(newProduct).to.be.an('object');
-        expect(newProduct).to.have.property('_id');
-        expect(newProduct.title).to.equal(productMock.title);
-    });
+	// Teste: adicionar um novo produto no banco
+	it('Deve adicionar um produto ao banco de dados com sucesso', async function () {
+		this.timeout(5000);
+		// Define um objeto simulado de produto
+		const productMock = {
+			title: "Produto Repo Test",
+			description: "Descrição do teste de repositório",
+			code: `REPO-TEST-${Date.now()}`, // Gera um código único com timestamp
+			price: 200,
+			stock: 10,
+			category: "Repo Test"
+		};
+		// Adiciona o produto usando o repositório
+		const newProduct = await productRepository.addProduct(productMock);
 
-    it('Deve encontrar um produto pelo seu ID', async () => {
-        const productMock = {
-            title: "Produto para Busca",
-            description: "Descrição",
-            code: "REPO-FIND-01",
-            price: 250,
-            stock: 5,
-            category: "Repo Test"
-        };
-        const createdProduct = await productRepository.addProduct(productMock);
-        const productId = createdProduct._id;
+		// Verifica se o produto foi criado corretamente
+		expect(newProduct).to.be.an('object');
+		expect(newProduct).to.have.property('_id'); // Deve ter um ID gerado pelo MongoDB
+		expect(newProduct.title).to.equal(productMock.title);
+	});
 
-        const foundProduct = await productRepository.getProductById(productId);
+	// Teste: buscar um produto pelo seu ID
+	it('Deve encontrar um produto pelo seu ID', async function () {
+		this.timeout(5000);
+		// Cria um novo produto para realizar a busca
+		const productMock = {
+			title: "Produto para Busca",
+			description: "Descrição",
+			code: `REPO-FIND-${Date.now()}`,
+			price: 250,
+			stock: 5,
+			category: "Repo Test"
+		};
+		// Adiciona o produto ao banco
+		const createdProduct = await productRepository.addProduct(productMock);
+		// Busca o produto usando o ID retornado
+		const foundProduct = await productRepository.getProductById(createdProduct._id);
 
-        expect(foundProduct._id.toString()).to.equal(productId.toString());
-    });
+		// Verifica se o produto encontrado tem o mesmo ID do criado
+		expect(foundProduct._id.toString()).to.equal(createdProduct._id.toString());
+	});
 });
