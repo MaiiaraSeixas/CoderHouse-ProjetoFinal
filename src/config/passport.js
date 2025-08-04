@@ -53,9 +53,9 @@ export function initializePassport() {
   // --- ESTRATÉGIA GITHUB CORRIGIDA ---
   passport.use('github', new GitHubStrategy(
     {
-      clientID: config.githubClientId,
-      clientSecret: config.githubClientSecret,
-      callbackURL: config.githubCallbackUrl
+      clientID: config.GITHUB_CLIENT_ID,
+      clientSecret: config.GITHUB_CLIENT_SECRET,
+      callbackURL: config.GITHUB_CALLBACK_URL
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -89,7 +89,7 @@ export function initializePassport() {
   passport.use('jwt', new JWTStrategy(
     {
       jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
-      secretOrKey: config.jwtSecret
+      secretOrKey: config.SECRET_KEY
     },
     async (jwtPayload, done) => {
       try {
