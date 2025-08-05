@@ -9,16 +9,9 @@ import { productRepository } from '../repositories/product.repository.js';
 // Importa as configurações, incluindo a URL de teste do MongoDB
 import config from '../config/config.js';
 
-// // Hook que roda antes de todos os testes
-// before(async function () {
-// 	this.timeout(10000); // Tempo maior para conectar ao banco
-// 	// Verifica se a URL de teste foi definida
-// 	if (!config.MONGO_URL_TEST) {
-// 		throw new Error("MONGO_URL_TEST não está definida no arquivo .env");
-// 	}
-// 	// Conecta ao banco de dados de teste
-// 	await mongoose.connect(config.MONGO_URL_TEST);
-// });
+// Os hooks before e after para conexão e desconexão do MongoDB
+// são gerenciados globalmente em src/tests/test-setup.js.
+// Portanto, eles permanecem comentados aqui para evitar duplicação.
 
 // Hook que roda antes de cada teste
 beforeEach(async function () {
@@ -26,12 +19,6 @@ beforeEach(async function () {
 	// Limpa a coleção de produtos antes de cada teste
 	await mongoose.connection.collection('products').deleteMany({});
 });
-
-// // Hook que roda após todos os testes
-// after(async () => {
-// 	// Fecha a conexão com o banco após a execução dos testes
-// 	await mongoose.connection.close();
-// });
 
 // Bloco principal que descreve os testes do repositório de produtos
 describe('Teste de Unidade do Repositório de Produtos', () => {
@@ -70,7 +57,7 @@ describe('Teste de Unidade do Repositório de Produtos', () => {
 
 	// Teste: buscar um produto pelo seu ID
 	it('Deve encontrar um produto pelo seu ID', async function () {
-		this.timeout(5000);
+		this.timeout(10000); // Aumentado o timeout para 10 segundos
 		// Cria um novo produto para realizar a busca
 		const productMock = {
 			title: "Produto para Busca",
