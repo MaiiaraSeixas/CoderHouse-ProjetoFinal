@@ -61,7 +61,8 @@ describe('Teste de Integração da Rota de Produtos', () => {
             await mongoose.connection.collection('users').deleteOne({ email: adminUserMock.email });
         });
 
-        it('Deve criar um produto com sucesso e retornar status 201', async () => {
+        it('Deve criar um produto com sucesso e retornar status 201', async function () {
+            this.timeout(7000);
             const newProductMock = {
                 title: "Produto de Teste Autorizado",
                 description: "Descrição do produto de teste com token",
@@ -79,7 +80,8 @@ describe('Teste de Integração da Rota de Produtos', () => {
             expect(response.body.payload).to.have.property('_id');
         });
 
-        it('Deve retornar erro de validação (status 400) se faltarem campos obrigatórios', async () => {
+        it('Deve retornar erro de validação (status 400) se faltarem campos obrigatórios', async function () {
+            this.timeout(5000);
             const invalidProductMock = {
                 description: "Produto sem título",
                 price: 150

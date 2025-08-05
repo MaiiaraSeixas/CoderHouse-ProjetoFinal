@@ -1,6 +1,7 @@
 // src/repositories/product.repository.js
 
 import ProductModel from '../models/product.model.js';
+import mongoose from 'mongoose';
 
 class ProductRepository {
   constructor() {
@@ -29,7 +30,10 @@ class ProductRepository {
 
   // Método para buscar um produto específico pelo ID
   async getProductById(id) {
-    return await this.model.findById(id).lean();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error('ID de produto inválido');
+    }
+    return await this.model.findById(id);
   }
 
   // Método para adicionar um novo produto ao banco
@@ -50,7 +54,7 @@ class ProductRepository {
   // NOVO MÉTODO ADICIONADO AQUI
   // Método para atualizar o estoque de um produto específico
   // identificado por `id`, com o novo valor `newStock`
-    async updateProductStock(id, newStock) {
+  async updateProductStock(id, newStock) {
     return await this.model.findByIdAndUpdate(id, { $set: { stock: newStock } }, { new: true });
   }
 }

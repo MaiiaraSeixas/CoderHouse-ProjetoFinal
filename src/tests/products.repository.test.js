@@ -9,16 +9,16 @@ import { productRepository } from '../repositories/product.repository.js';
 // Importa as configurações, incluindo a URL de teste do MongoDB
 import config from '../config/config.js';
 
-// Hook que roda antes de todos os testes
-before(async function () {
-	this.timeout(10000); // Tempo maior para conectar ao banco
-	// Verifica se a URL de teste foi definida
-	if (!config.MONGO_URL_TEST) {
-		throw new Error("MONGO_URL_TEST não está definida no arquivo .env");
-	}
-	// Conecta ao banco de dados de teste
-	await mongoose.connect(config.MONGO_URL_TEST);
-});
+// // Hook que roda antes de todos os testes
+// before(async function () {
+// 	this.timeout(10000); // Tempo maior para conectar ao banco
+// 	// Verifica se a URL de teste foi definida
+// 	if (!config.MONGO_URL_TEST) {
+// 		throw new Error("MONGO_URL_TEST não está definida no arquivo .env");
+// 	}
+// 	// Conecta ao banco de dados de teste
+// 	await mongoose.connect(config.MONGO_URL_TEST);
+// });
 
 // Hook que roda antes de cada teste
 beforeEach(async function () {
@@ -27,11 +27,11 @@ beforeEach(async function () {
 	await mongoose.connection.collection('products').deleteMany({});
 });
 
-// Hook que roda após todos os testes
-after(async () => {
-	// Fecha a conexão com o banco após a execução dos testes
-	await mongoose.connection.close();
-});
+// // Hook que roda após todos os testes
+// after(async () => {
+// 	// Fecha a conexão com o banco após a execução dos testes
+// 	await mongoose.connection.close();
+// });
 
 // Bloco principal que descreve os testes do repositório de produtos
 describe('Teste de Unidade do Repositório de Produtos', () => {

@@ -1,87 +1,130 @@
 // src/tests/auth.router.test.js
 
-import { expect } from 'chai';            // Biblioteca de assertions usada para validar os resultados dos testes
-import supertest from 'supertest';       // Biblioteca para simular requisições HTTP ao servidor
-import mongoose from 'mongoose';         // ODM para conexão com o banco de dados MongoDB
-import app from '../app.js';             // Importa a aplicação Express
-import UserModel from '../models/user.model.js';  // Importa o model de usuário para manipular dados no banco
+// --- IMPORTAÇÕES DE DEPENDÊNCIAS E MODELS ---
+import { expect } from 'chai';               // Framework de asserções para validar o comportamento dos testes
+import supertest from 'supertest';           // Biblioteca que simula requisições HTTP ao servidor
+import mongoose from 'mongoose';             // ODM responsável por conectar e manipular o MongoDB
+import app from '../app.js';                 // Importação da aplicação Express que será testada
+import UserModel from '../models/user.model.js';   // Model responsável pela collection de usuários
+import CartModel from '../models/cart.model.js';   // Model responsável pela collection de carrinhos
 
-const requester = supertest(app); // Instância do supertest com a aplicação carregada
+// Cria um "requester" do supertest utilizando a aplicação Express para enviar requisições de teste
+const requester = supertest(app);
 
-// Testes agrupados usando "describe"
+// --- BLOCO PRINCIPAL DE TESTES ---
 describe('Teste de Integração da Rota de Autenticação', () => {
-    // Mock de usuário que será usado nos testes
-    const userMock = {
-        first_name: 'Auth',
-        last_name: 'Tester',
-        email: `auth-tester-${Date.now()}@test.com`,   // Email único (timestamp) para evitar colisão
-        password: 'test-password123',
-        role: 'user'
-    };
-    let authTokenCookie;  // Variável para guardar o cookie de autenticação entre os testes
 
-    // Após os testes, remove o usuário criado do banco (limpeza)
-    after(async function() {
-        this.timeout(5000);
-        await mongoose.connection.collection('users').deleteOne({ email: userMock.email });
-    });
+	// Mock de usuário criado para ser usado nos testes
+	const userMock = {
+		first_name: 'Auth',                                   // Nome fictício
+		last_name: 'Tester',                                  // Sobrenome fictício
+		email: `auth-tester-${Date.now()}@test.com`,          // Email único usando timestamp
+		password: 'test-password123',                         // Senha fictícia
+		role: 'user'                                          // Papel padrão de usuário
+	};
 
-    // Grupo de testes relacionados ao registro
-    context('Registro de Usuário (POST /api/sessions/register)', () => {
-        // Caso de teste: deve registrar com sucesso
-        it('Deve registrar um novo usuário com sucesso e retornar status 201', async function() {
-            this.timeout(5000); 
-            const response = await requester.post('/api/sessions/register').send(userMock);
-            expect(response.status).to.equal(201); // Verifica se o status HTTP está correto
-            expect(response.body.payload.user).to.have.property('email', userMock.email); // Confere se o usuário retornado é o mesmo
-        });
+	// Essa variável guardará o cookie JWT retornado no login com sucesso
+	let authTokenCookie;
 
-        // Caso de teste: deve impedir registro duplicado
-        it('Deve retornar erro 401 ao tentar registrar um usuário com email duplicado', async () => {
-            const response = await requester.post('/api/sessions/register').send(userMock);
-            expect(response.status).to.equal(401);
-        });
-    });
+	/**
+	 * HOOK "after":
+	 * Executa automaticamente **após todos os testes deste bloco**.
+	 * Serve para limpar o que foi criado no banco (boa prática).
+	 */
+	after(async function () {
+		this.timeout(5000); // Aumenta o tempo limite para evitar timeouts
 
-    // Grupo de testes relacionados ao login
-    context('Login de Usuário (POST /api/sessions/login)', () => {
-        it('Deve fazer o login de um usuário com sucesso e retornar um cookie de autenticação', async () => {
-            const credentials = {
-                email: userMock.email,
-                password: userMock.password
-            };
-            const response = await requester.post('/api/sessions/login').send(credentials);
-            expect(response.status).to.equal(200); // Espera sucesso no login
-            const cookies = response.headers['set-cookie'];  // Captura os cookies retornados
-            authTokenCookie = cookies.find(cookie => cookie.startsWith('jwtCookieToken=')); // Armazena o cookie JWT
-            expect(authTokenCookie).to.exist; // Verifica se o cookie existe
-        });
+		// Busca o usuário pelo email mockado
+		const user = await UserModel.findOne({ email: userMock.email });
 
-        // Caso negativo: senha incorreta
-        it('Deve retornar erro 401 ao tentar fazer login com senha incorreta', async function() {
-            this.timeout(5000);
-            const credentials = {
-                email: userMock.email,
-                password: 'wrong-password'
-            };
-            const response = await requester.post('/api/sessions/login').send(credentials);
-            expect(response.status).to.equal(401);
-        });
-    });
+		if (user) {
+			// Se existir carrinho associado ao usuário -> removê-lo também
+			if (user.cartId) {
+				await CartModel.findByIdAndDelete(user.cartId);
+			}
+			// Por fim, remove o usuário de teste
+			await UserModel.findByIdAndDelete(user._id);
+		}
+	});
 
-    // Grupo de testes relacionados à rota de verificação de sessão atual
-    context('Verificação de Sessão (GET /api/sessions/current)', () => {
-        // Teste com cookie válido
-        it('Deve retornar os dados do usuário autenticado ao enviar um cookie válido', async () => {
-            const response = await requester.get('/api/sessions/current').set('Cookie', authTokenCookie);
-            expect(response.status).to.equal(200); // Deve permitir o acesso
-            expect(response.body.payload.user).to.have.property('email', userMock.email);
-        });
+	// --- 1) TESTES DE REGISTRO (Rota: POST /api/sessions/register) ---
+	context('Registro de Usuário (POST /api/sessions/register)', () => {
 
-        // Teste sem o cookie
-        it('Deve retornar erro 401 ao tentar acessar a rota sem um cookie de autenticação', async () => {
-            const response = await requester.get('/api/sessions/current');
-            expect(response.status).to.equal(401); // Deve barrar o acesso
-        });
-    });
+		it('Deve registrar um novo usuário com sucesso e retornar status 201', async function () {
+			this.timeout(7000); // Evita timeout
+
+			// Envia requisição POST de cadastro com o usuário fictício
+			const response = await requester.post('/api/sessions/register').send(userMock);
+
+			// Espera que o status seja 201 (Created)
+			expect(response.status).to.equal(201);
+			// Verifica se o usuário retornado no payload tem o mesmo email do mock
+			expect(response.body.payload.user).to.have.property('email', userMock.email);
+		});
+
+		it('Deve retornar erro 401 ao tentar registrar um usuário com email duplicado', async () => {
+			// Tenta registrar o mesmo usuário novamente
+			// Esperado: erro 401 (já existe usuário com esse email)
+			const response = await requester.post('/api/sessions/register').send(userMock);
+			expect(response.status).to.equal(401);
+		});
+	});
+
+	// --- 2) TESTES DE LOGIN (Rota: POST /api/sessions/login) ---
+	context('Login de Usuário (POST /api/sessions/login)', () => {
+
+		it('Deve fazer o login de um usuário com sucesso e retornar um cookie de autenticação', async () => {
+			// Monta o corpo da requisição com email + senha corretos
+			const credentials = { email: userMock.email, password: userMock.password };
+
+			// Faz login
+			const response = await requester.post('/api/sessions/login').send(credentials);
+
+			// Espera status 200 (OK)
+			expect(response.status).to.equal(200);
+
+			// Captura cookies retornados na resposta (header Set-Cookie)
+			const cookies = response.headers['set-cookie'];
+
+			// Procura especificamente pelo cookie chamado "jwtCookieToken"
+			authTokenCookie = cookies.find(c => c.startsWith('jwtCookieToken='));
+
+			// O token deve existir se o login estiver correto
+			expect(authTokenCookie).to.exist;
+		});
+
+		it('Deve retornar erro 401 ao tentar fazer login com senha incorreta', async function () {
+			this.timeout(5000);
+
+			// Usa uma senha errada
+			const credentials = { email: userMock.email, password: 'wrong-password' };
+			const response = await requester.post('/api/sessions/login').send(credentials);
+
+			// Esperado: erro 401 (Unauthorized)
+			expect(response.status).to.equal(401);
+		});
+	});
+
+	// --- 3) TESTES DE VERIFICAÇÃO DE SESSÃO (Rota: GET /api/sessions/current) ---
+	context('Verificação de Sessão (GET /api/sessions/current)', () => {
+
+		it('Deve retornar os dados do usuário autenticado ao enviar um cookie válido', async () => {
+			// Envia requisição GET com o cookie de autenticação obtido no login
+			const response = await requester
+				.get('/api/sessions/current')
+				.set('Cookie', authTokenCookie); // Seta o cookie no header
+
+			expect(response.status).to.equal(200);
+			// Deve retornar o usuário autenticado correspondente ao cookie
+			expect(response.body.payload.user).to.have.property('email', userMock.email);
+		});
+
+		it('Deve retornar erro 401 ao tentar acessar a rota sem um cookie de autenticação', async () => {
+			// Faz a requisição sem enviar o cookie
+			const response = await requester.get('/api/sessions/current');
+			// A API deve bloquear o acesso
+			expect(response.status).to.equal(401);
+		});
+	});
+
 });

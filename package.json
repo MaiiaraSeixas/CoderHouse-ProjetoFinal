@@ -8,7 +8,7 @@
     "start": "node src/app.js",
     "dev": "NODE_ENV=development npx nodemon src/app.js",
     "prod": "NODE_ENV=production node src/app.js",
-    "tests": "mocha -r dotenv/config src/tests/**/*.test.js"
+    "tests": "mocha -r dotenv/config --file src/tests/test-setup.js src/tests/**/*.test.js"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
