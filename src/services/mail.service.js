@@ -20,7 +20,7 @@ export default class MailService {
   async send({ to, subject, html, attachments = [] }) {
     try {
       const result = await this.transporter.sendMail({
-        from: `Seu E-commerce <${config.mailing.user}>`,
+        from: `Seu E-commerce <${config.MAIL_USER}>`,
         to,
         subject,
         html,

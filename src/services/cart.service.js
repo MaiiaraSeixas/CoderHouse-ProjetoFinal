@@ -1,10 +1,12 @@
 // src/services/cart.service.js - VERSÃO FINAL E CORRIGIDA
 
 // Importando os modelos e serviços necessários para manipulação de carrinho
-import CartModel from "../models/cart.model.js";  // Modelo de carrinho
+import CartModel from "../models/cart.model.js";  // Modelo de 
+import ProductModel from "../models/product.model.js";
 import { productService } from "./products.service.js";  // Serviço de produtos (atualiza estoque)
 import { ticketService } from "./ticket.service.js";  // Serviço de emissão de tickets
 import MailService from './mail.service.js';  // Serviço para envio de emails
+
 
 // Definição da classe CartService que gerencia as operações relacionadas ao carrinho
 class CartService {
@@ -56,132 +58,83 @@ class CartService {
    * - Atualiza o estoque dos produtos.
    * - Cria um ticket de compra e envia a confirmação por email.
    */
-
   async purchaseCart(cartId, user) {
-    console.log('\n=== [purchaseCart] Iniciando compra ===');
 
-    const mailService = new MailService();
-    // A busca do carrinho está correta, mas vamos verificar seu conteúdo
+    const mailService = new MailService(); // Serviço de envio de e-mails
+
+    // 1. Busca o carrinho no banco (sem popular os dados dos produtos)
     const cart = await CartModel.findById(cartId);
     if (!cart) {
-      console.log('ERRO: Carrinho não encontrado com o ID:', cartId);
+
       throw new Error('Carrinho não encontrado');
     }
 
-    console.log('Carrinho encontrado:', JSON.stringify(cart, null, 2));
+    const productsToPurchase = [];     // Produtos que podem ser comprados
+    const productsNotPurchased = [];   // Produtos SEM estoque ou inválidos
+    let totalAmount = 0;               // Soma total a pagar
 
-    const productsToPurchase = [];
-    const productsNotPurchased = [];
-    let totalAmount = 0;
-
-    // Verificação de estoque
+    // 2. Para cada item do carrinho...
     for (const item of cart.products) {
-      console.log(`\nProcessando item do carrinho: product ID = ${item.product}, quantity = ${item.quantity}`);
 
-      // Vamos usar o ProductModel diretamente para garantir que não haja interferência de camadas
-      const productData = await ProductModel.findById(item.product);
 
-      // Este é o log mais importante: ele nos dirá se o produto foi encontrado no banco
-      console.log(`Produto ${item.product} buscado no banco:`, productData ? 'Encontrado' : 'null');
+      // 3. Busca as informações completas do produto no banco
+      const productData = await productService.getProductById(item.product);
 
+
+      // 4. Se o produto existir e tiver estoque suficiente:
       if (productData && productData.stock >= item.quantity) {
-        console.log(`--> ESTOQUE OK: ${productData.stock} >= ${item.quantity}. Adicionando para compra.`);
-        totalAmount += item.quantity * productData.price;
-        productsToPurchase.push({
-          ...item.toObject(),
-          product: productData
-        });
+
+        totalAmount += item.quantity * productData.price;  // Soma ao valor final
+        productsToPurchase.push({ productData, quantity: item.quantity }); // Separa para compra
       } else {
-        console.log(`--> FALHA: Estoque insuficiente ou produto não encontrado.`);
-        productsNotPurchased.push(item);
+
+        productsNotPurchased.push(item); // Separa como NÃO comprado
       }
     }
 
-    console.log('\nResumo da verificação:');
-    console.log('Total de produtos a comprar:', productsToPurchase.length);
-    console.log('Total de produtos não comprados:', productsNotPurchased.length);
 
-    let ticket = null;
 
+    let ticket = null; // Ticket de compra (nota fiscal)
+
+    // 5. Se houver produtos válidos para comprar...
     if (productsToPurchase.length > 0) {
-      // ... (lógica de criação do ticket, que já sabemos que está correta)
-      const ticketData = { amount: totalAmount, purchaser: user.email };
-      ticket = await ticketService.createTicket(ticketData);
 
+      const ticketData = { amount: totalAmount, purchaser: user.email };
+      ticket = await ticketService.createTicket(ticketData); // Cria ticket
+
+
+      // 6. Atualiza o estoque de cada produto comprado
       for (const item of productsToPurchase) {
-        const newStock = item.product.stock - item.quantity;
-        await productService.updateProductStock(item.product._id, newStock);
+        const newStock = item.productData.stock - item.quantity;
+
+        await productService.updateProductStock(item.productData._id, newStock);
       }
 
-      cart.products = productsNotPurchased;
-      await cart.save();
+      // 7. Envia e-mail de confirmação da compra
+
       await mailService.sendPurchaseConfirmation(user.email, ticket);
     }
 
+    /**
+     * 8. ✅ Atualiza o carrinho de forma ATÔMICA,
+     *     mantendo apenas os produtos **não comprados**.
+     *     (Esta linha evita o VersionError do Mongoose)
+     */
+
+    await CartModel.findByIdAndUpdate(cartId, { products: productsNotPurchased });
+
+
+    // (Opcional) Recarrega o carrinho para debug
+    const cartAfter = await CartModel.findById(cartId).lean();
+
+
+    // 9. Prepara retorno com os IDs dos produtos que ficaram pendentes
     const notPurchasedIds = productsNotPurchased.map(item => item.product.toString());
 
-    console.log('\n=== [purchaseCart] Final ===');
-    console.log('Retorno da função:', { ticket, productsNotPurchased: notPurchasedIds });
 
     return { ticket, productsNotPurchased: notPurchasedIds };
   }
 
-  // async purchaseCart(cartId, user) {
-  //   const mailService = new MailService();
-  //   // 1. Busca o carrinho sem .populate()
-  //   const cart = await CartModel.findById(cartId);
-  //   if (!cart) throw new Error('Carrinho não encontrado');
-
-  //   const productsToPurchase = [];
-  //   const productsNotPurchased = [];
-  //   let totalAmount = 0;
-
-  //   // 2. Itera sobre os itens do carrinho
-  //   for (const item of cart.products) {
-  //     // 3. Busca os dados completos do produto manualmente para cada item
-  //     const productData = await productService.getProductById(item.product);
-
-  //     // 4. Lógica de verificação com os dados frescos do produto
-  //     if (productData && productData.stock >= item.quantity) {
-  //       totalAmount += item.quantity * productData.price;
-  //       productsToPurchase.push({
-  //         ...item.toObject(), // Converte o subdocumento para um objeto simples
-  //         product: productData // Anexa os dados completos do produto
-  //       });
-  //     } else {
-  //       productsNotPurchased.push(item);
-  //     }
-  //   }
-
-  //   let ticket = null;
-
-  //   if (productsToPurchase.length > 0) {
-  //     // Desconta do estoque
-  //     for (const item of productsToPurchase) {
-  //       const newStock = item.product.stock - item.quantity;
-  //       await productService.updateProductStock(item.product._id, newStock);
-  //     }
-
-  //     // Cria o ticket
-  //     const ticketData = { amount: totalAmount, purchaser: user.email };
-  //     ticket = await ticketService.createTicket(ticketData);
-
-  //     // Atualiza o carrinho com os produtos que não foram comprados
-  //     cart.products = productsNotPurchased;
-  //     await cart.save();
-
-  //     // Envia email de confirmação
-  //     await mailService.sendPurchaseConfirmation(user.email, ticket);
-  //   }
-
-  //   // Prepara a lista final de IDs não comprados
-  //   const notPurchasedIds = productsNotPurchased.map(item => item.product.toString());
-
-  //   return {
-  //     ticket,
-  //     productsNotPurchased: notPurchasedIds
-  //   };
-  // }
 
   // Método auxiliar para remover um produto do carrinho
   async removeProductFromCart(cartId, productId) {

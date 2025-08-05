@@ -52,16 +52,16 @@ describe('Teste de Integração da Rota de Carrinhos', () => {
 
 		userCartId = newCart._id.toString(); // Guarda o ID do carrinho
 
-		// Cria um produto no banco para usar nos testes de compra
-		const productMock = {
-			title: "Produto para Teste de Carrinho",
-			description: "Descrição",
-			code: `CART-TEST-${Date.now()}`,
-			price: 100,
-			stock: 10,
-			category: "Testes"
-		};
-		testProduct = await ProductModel.create(productMock);
+		// // Cria um produto no banco para usar nos testes de compra
+		// const productMock = {
+		// 	title: "Produto para Teste de Carrinho",
+		// 	description: "Descrição",
+		// 	code: `CART-TEST-${Date.now()}`,
+		// 	price: 100,
+		// 	stock: 10,
+		// 	category: "Testes"
+		// };
+		// testProduct = await ProductModel.create(productMock);
 
 		// Gera o token JWT manualmente para simular o login
 		const token = generateToken({
@@ -91,11 +91,44 @@ describe('Teste de Integração da Rota de Carrinhos', () => {
 	 * - zera o carrinho usado
 	 * - reseta o estoque do produto
 	 */
+	// beforeEach(async function () {
+	// 	this.timeout(5000);
+
+	// 	// Limpa o carrinho
+	// 	await CartModel.findByIdAndUpdate(userCartId, { $set: { products: [] } });
+
+	// 	// CORREÇÃO: Atualiza o estoque E recarrega a variável testProduct do banco.
+	// 	// Isso garante que temos a versão mais recente do documento antes de cada teste.
+	// 	testProduct = await ProductModel.findByIdAndUpdate(
+	// 		testProduct._id,
+	// 		{ $set: { stock: 10 } },
+	// 		{ new: true }     // ← retorna o documento atualizado
+	// 	);
+	// });
+
+
+	/**
+	 * BEFORE EACH → limpa o carrinho E CRIA UM PRODUTO NOVO RECÉM-INICIALIZADO
+	 */
+
 	beforeEach(async function () {
 		this.timeout(5000);
+
+		// Limpa o carrinho entre testes
 		await CartModel.findByIdAndUpdate(userCartId, { $set: { products: [] } });
-		await ProductModel.findByIdAndUpdate(testProduct._id, { $set: { stock: 10 } });
+
+		// Cria produto novinho antes de cada teste
+		const productMock = {
+			title: 'Produto para Teste de Carrinho',
+			description: 'Descrição',
+			code: `CART-TEST-${Date.now()}`,
+			price: 100,
+			stock: 10,
+			category: 'Testes'
+		};
+		testProduct = await ProductModel.create(productMock);
 	});
+
 
 	/**
 	 * TESTE 1 - Inserção de produto no carrinho
