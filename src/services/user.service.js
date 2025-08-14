@@ -2,6 +2,13 @@
 import UserModel from '../models/user.model.js';
 import CartModel from '../models/cart.model.js';
 
+// Documentos obrigatórios para se tornar Premium
+const REQUIRED_DOCUMENTS = [
+  'Identificacion',
+  'Comprobante de domicilio',
+  'Comprobante de estado de cuenta'
+];
+
 class UserService {
   async getUserByEmail(email) {
     return await UserModel.findOne({ email }).lean();
@@ -11,25 +18,33 @@ class UserService {
     return await UserModel.findById(id).lean();
   }
 
-  // --- MÉTODO CREATEUSER CORRIGIDO E ROBUSTO ---
-  // Garante que todo novo usuário tenha um carrinho desde o momento da criação.
+  // ✅ Criação atômica de usuário com carrinho
   async createUser(userData) {
-    // 1. Cria o usuário no banco de dados
-    const newUser = await UserModel.create(userData);
+    const session = await UserModel.startSession();
+    session.startTransaction();
 
-    // 2. Cria um carrinho vazio para este novo usuário
-    const newCart = await CartModel.create({ user: newUser._id, products: [] });
+    try {
+      const newUser = await UserModel.create([userData], { session });
 
-    // 3. Atualiza o documento do usuário para associar o ID do novo carrinho
-    // O { new: true } garante que a operação retorna o documento do usuário já atualizado.
-    const userWithCart = await UserModel.findByIdAndUpdate(
-      newUser._id,
-      { $set: { cartId: newCart._id } },
-      { new: true }
-    ).lean();
+      const newCart = await CartModel.create(
+        [{ user: newUser[0]._id, products: [] }],
+        { session }
+      );
 
-    // 4. Retorna o usuário completo com o cartId associado
-    return userWithCart;
+      const updatedUser = await UserModel.findByIdAndUpdate(
+        newUser[0]._id,
+        { $set: { cartId: newCart[0]._id } },
+        { new: true, session }
+      ).lean();
+
+      await session.commitTransaction();
+      return updatedUser;
+    } catch (error) {
+      await session.abortTransaction();
+      throw new Error('Falha ao criar usuário: ' + error.message);
+    } finally {
+      session.endSession();
+    }
   }
 
   async getAllUsers() {
@@ -37,80 +52,94 @@ class UserService {
   }
 
   async deleteUser(id) {
-    const result = await UserModel.findByIdAndDelete(id);
-    return Boolean(result);
+    const session = await UserModel.startSession();
+    session.startTransaction();
+
+    try {
+      const user = await UserModel.findById(id).session(session);
+      if (!user) return false;
+
+      // Remove carrinho associado
+      await CartModel.deleteOne({ _id: user.cartId }).session(session);
+
+      // Remove usuário
+      await UserModel.deleteOne({ _id: id }).session(session);
+
+      await session.commitTransaction();
+      return true;
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
+  // ✅ Validação robusta de documentos para mudança de role
   async changeRole(uid) {
     const user = await UserModel.findById(uid);
-    if (!user) return null;
-    user.role = user.role === 'user' ? 'premium' : 'user';
+    if (!user) throw new Error('Usuário não encontrado');
+    if (user.role === 'admin') return user;
+
+    // Verifica documentos obrigatórios
+    const userDocNames = user.documents.map(doc => doc.name);
+    const hasAllDocuments = REQUIRED_DOCUMENTS.every(doc =>
+      userDocNames.includes(doc)
+    );
+
+    if (!hasAllDocuments) {
+      throw new Error(
+        `Documentos obrigatórios faltando: ${REQUIRED_DOCUMENTS.join(', ')}`
+      );
+    }
+
+    // Muda apenas de user para premium
+    if (user.role === 'user') {
+      user.role = 'premium';
+      await user.save();
+    }
+
+    return user;
+  }
+
+  // ✅ Armazenamento seguro de documentos
+  async updateUserDocuments(uid, files) {
+    if (!files?.length) {
+      throw new Error('Nenhum arquivo fornecido');
+    }
+
+    const user = await UserModel.findById(uid);
+    if (!user) throw new Error('Usuário não encontrado');
+
+    // Valida e armazena metadados seguros
+    const validDocuments = files.map(file => ({
+      name: file.originalname,
+      reference: `/assets/documents/${file.filename}`, // Caminho seguro
+      type: file.mimetype,
+      size: file.size,
+      uploadedAt: new Date()
+    }));
+
+    user.documents.push(...validDocuments);
     await user.save();
     return user;
   }
 
-  // Função auxiliar para garantir que um usuário existente tenha um carrinho
+  // ✅ Garantia segura de carrinho
   async ensureCartForUser(userId) {
-    const cart = await CartModel.create({ user: userId, products: [] });
-    await UserModel.findByIdAndUpdate(userId, { cartId: cart._id });
-    return cart._id;
+    const user = await UserModel.findById(userId);
+    if (!user) throw new Error('Usuário não encontrado');
+
+    if (user.cartId) {
+      return user.cartId;
+    }
+
+    const newCart = await CartModel.create({ user: userId, products: [] });
+    user.cartId = newCart._id;
+    await user.save();
+
+    return newCart._id;
   }
 }
 
 export default new UserService();
-
-
-
-
-
-
-
-// // services/user.service.js
-
-// import UserModel from '../models/user.model.js';
-// import CartModel from '../models/cart.model.js'; 
-
-// class UserService {
-//   // Busca usuário por e-mail (retorna objeto puro para melhor performance)
-//   async getUserByEmail(email) {
-//     return await UserModel.findOne({ email }).lean();
-//   }
-
-//   // Busca usuário por ID
-//   async getUserById(id) {
-//     return await UserModel.findById(id).lean();
-//   }
-
-//   // Cria um novo usuário
-//   async createUser(userData) {
-//     return await UserModel.create(userData);
-//   }
-
-//   // Lista todos os usuários
-//   async getAllUsers() {
-//     return await UserModel.find({}).lean();
-//   }
-
-//   // Remove usuário por ID
-//   async deleteUser(id) {
-//     const result = await UserModel.findByIdAndDelete(id);
-//     return Boolean(result);
-//   }
-
-//   // Alterna entre roles "user" e "premium"
-//   async changeRole(uid) {
-//     const user = await UserModel.findById(uid);
-//     if (!user) return null;
-//     user.role = user.role === 'user' ? 'premium' : 'user';
-//     await user.save();
-//     return user;
-//   }
-//   // Novo método para garantir que o usuário tenha um carrinho
-//   async createEmptyCartForUser(userId) {
-//     const newCart = await CartModel.create({ user: userId, products: [] });
-//     await UserModel.findByIdAndUpdate(userId, { cartId: newCart._id });
-//     return newCart;
-//   }
-// }
-
-// export default new UserService();

@@ -2,7 +2,7 @@
 
 import app from './app.js';
 import config from './config/config.js';
-import { connectDb } from './config/db.js';
+import { connectDB } from './config/db.js';
 import http from 'http';
 import { Server } from 'socket.io';
 import logger from './utils/logger.js';
@@ -15,7 +15,7 @@ import MessageModel from './models/message.model.js';
 const startServer = async () => {
     try {
         // Conecta à base de dados primeiro.
-        await connectDb();
+        await connectDB();
 
         const server = http.createServer(app);
         const io = new Server(server);

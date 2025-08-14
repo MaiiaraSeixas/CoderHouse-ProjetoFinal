@@ -1,50 +1,86 @@
-// services/products.service.js
+import ProductRepository from '../repositories/product.repository.js';
 
-// Importa o repositório de produtos, que contém os métodos para acessar e manipular os dados do banco de dados
-import { productRepository } from "../repositories/product.repository.js";
-
-// Define a classe ProductService, que atua como uma camada de serviço entre os controladores e o repositório
 class ProductService {
-    // Construtor da classe: inicializa o atributo `repository` com o repositório de produtos
     constructor() {
-        this.repository = productRepository;
+        // Inicializa o repositório de produtos para operações de dados
+        this.productRepository = new ProductRepository();
     }
 
-    // Método assíncrono para obter a lista de produtos, possivelmente com filtros e paginação (definidos em `params`)
+    /**
+     * Obtém produtos paginados e filtrados
+     * @param {Object} params - Parâmetros de consulta
+     * @param {number} params.limit - Limite de produtos por página (padrão: 10)
+     * @param {number} params.page - Página atual (padrão: 1)
+     * @param {string} params.sort - Ordenação ('asc' para crescente, 'desc' para decrescente)
+     * @param {string} params.query - Categoria para filtrar
+     * @returns {Object} - Resultado paginado de produtos
+     */
     async getProducts(params) {
-        return await this.repository.getProducts(params);
+        // Extrai parâmetros com valores padrão
+        const { limit = 10, page = 1, sort, query } = params;
+
+        // Cria filtro baseado na categoria (se informada)
+        const filter = query ? { category: query } : {};
+
+        // Configura opções de paginação e ordenação
+        const options = {
+            page: Number(page),
+            limit: Number(limit),
+            lean: true  // Retorna objetos JavaScript simples (melhor performance)
+        };
+
+        // Aplica ordenação se solicitado
+        if (sort) {
+            options.sort = { price: sort === 'asc' ? 1 : -1 };
+        }
+
+        // Delegar a consulta paginada ao repositório
+        return await this.productRepository.get(filter, options);
     }
 
-    // Método assíncrono para obter um único produto pelo seu ID
+    /**
+     * Obtém um produto específico pelo ID
+     * @param {string} id - ID do produto
+     * @returns {Object} - Produto encontrado
+     */
     async getProductById(id) {
-        return await this.repository.getProductById(id);
+        return await this.productRepository.getById(id);
     }
 
-    // Método assíncrono para adicionar um novo produto ao banco de dados
-    async addProduct(product) {
-        return await this.repository.addProduct(product);
+    /**
+     * Adiciona um novo produto ao sistema
+     * @param {Object} productData - Dados do novo produto
+     * @returns {Object} - Produto criado
+     * @throws {Error} - Se campos obrigatórios estiverem faltando
+     */
+    async addProduct(productData) {
+        // Validação de campos obrigatórios
+        if (!productData.title || !productData.price) {
+            throw new Error("Título e preço são campos obrigatórios.");
+        }
+
+        // Lógica adicional pode ser adicionada aqui (ex: validação de categoria)
+        return await this.productRepository.create(productData);
     }
 
-    // Método assíncrono para atualizar um produto existente, identificado por `id`, com os dados novos `productData`
+    /**
+     * Atualiza um produto existente
+     * @param {string} id - ID do produto
+     * @param {Object} productData - Novos dados do produto
+     * @returns {Object} - Produto atualizado
+     */
     async updateProduct(id, productData) {
-        return await this.repository.updateProduct(id, productData);
+        return await this.productRepository.update(id, productData);
     }
 
-    // Método assíncrono para remover um produto do banco de dados com base no seu ID
+    /**
+     * Remove permanentemente um produto
+     * @param {string} id - ID do produto
+     * @returns {Object} - Resultado da operação
+     */
     async deleteProduct(id) {
-        return await this.repository.deleteProduct(id);
-    }
-
-    // Método assíncrono para atualizar o estoque de um produto específico, identificado por `id`, com o novo valor `newStock`
-    async updateProductStock(id, newStock) {
-        return await this.repository.updateProductStock(id, newStock);
+        return await this.productRepository.delete(id);
     }
 }
 
-// Cria uma instância única da classe ProductService e a exporta para ser usada em outras partes da aplicação
-export const productService = new ProductService();
-// O código acima define um serviço de produtos que permite buscar, adicionar, atualizar e deletar produtos no banco de dados usando o repositório de produtos.
-// Isso encapsula a lógica de negócios relacionada aos produtos, mantendo o código organizado e modular.
-
-
-
+export default new ProductService();

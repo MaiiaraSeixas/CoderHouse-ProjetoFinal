@@ -1,0 +1,40 @@
+import UserModel from '../../models/user.model.js';
+
+class UserDAO {
+  // Busca um usuário pelo ID, retornando objeto JavaScript simples
+  async findById(id) {
+    return await UserModel.findById(id).lean();
+  }
+
+  // Busca um usuário pelo email (campo único)
+  async findByEmail(email) {
+    return await UserModel.findOne({ email }).lean();
+  }
+
+  // Cria um novo usuário no sistema
+  async create(userData) {
+    const newUser = new UserModel(userData);
+    return await newUser.save();
+  }
+
+  // Atualiza os dados de um usuário existente
+  async update(id, userData) {
+    return await UserModel.findByIdAndUpdate(
+      id,
+      userData,
+      { new: true }  // Retorna a versão atualizada do usuário
+    ).lean();
+  }
+
+  // Remove permanentemente um usuário do sistema
+  async delete(id) {
+    return await UserModel.findByIdAndDelete(id);
+  }
+
+  // Lista todos os usuários cadastrados (cuidado com performance em grandes volumes)
+  async findAll() {
+    return await UserModel.find({}).lean();
+  }
+}
+
+export default new UserDAO();

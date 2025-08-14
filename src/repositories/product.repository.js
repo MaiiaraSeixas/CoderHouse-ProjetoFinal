@@ -1,63 +1,67 @@
-// src/repositories/product.repository.js
+import productDAO from '../daos/mongo/product.dao.js';
+import ProductDTO from '../dtos/ProductDTO.js';
 
-import ProductModel from '../models/product.model.js';
-import mongoose from 'mongoose';
-
-class ProductRepository {
+export default class ProductRepository {
   constructor() {
-    // O repositório agora depende diretamente do Model.
-    this.model = ProductModel;
+    // Inicializa o DAO para operações de banco de dados com produtos
+    this.productDAO = productDAO;
   }
 
-  // Método para buscar produtos com suporte a paginação, ordenação e filtro por categoria
-  async getProducts(params) {
-    const { limit = 10, page = 1, sort, query } = params;
-    const options = {
-      page: Number(page),
-      limit: Number(limit),
-      lean: true
-    };
+  /**
+   * Busca produtos com paginação e filtros
+   * @param {Object} query - Filtros de consulta (ex: { category: 'eletrônicos' })
+   * @param {Object} options - Opções de paginação (page, limit, sort, etc.)
+   * @returns {Object} - Resultado paginado com produtos convertidos para DTO
+   */
+  async get(query, options) {
+    // Executa a consulta paginada usando o DAO
+    const result = await this.productDAO.find(query, options);
 
-    if (sort) {
-      options.sort = { price: sort === 'asc' ? 1 : -1 };
-    }
+    // Converte cada produto na lista de resultados para DTO
+    // Mantém os metadados de paginação (total, limite, página, etc.)
+    result.docs = result.docs.map(product => new ProductDTO(product));
 
-    const filter = query ? { category: query } : {};
-
-    // A chamada ao 'paginate' do Mongoose irá funcionar corretamente.
-    return await this.model.paginate(filter, options);
+    return result;
   }
 
-  // Método para buscar um produto específico pelo ID
-  async getProductById(id) {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new Error('ID de produto inválido');
-    }
-    return await this.model.findById(id);
+  /**
+   * Busca um produto específico pelo ID
+   * @param {string} id - ID do produto
+   * @returns {ProductDTO|null} - Produto em DTO ou null se não encontrado
+   */
+  async getById(id) {
+    const product = await this.productDAO.findById(id);
+    // Retorna DTO se encontrado, caso contrário null
+    return product ? new ProductDTO(product) : null;
   }
 
-  // Método para adicionar um novo produto ao banco
-  async addProduct(productData) {
-    return await this.model.create(productData);
+  /**
+   * Cria um novo produto no sistema
+   * @param {Object} data - Dados do novo produto
+   * @returns {ProductDTO} - Produto criado convertido para DTO
+   */
+  async create(data) {
+    const newProduct = await this.productDAO.create(data);
+    return new ProductDTO(newProduct);
   }
 
-  // Método para atualizar um produto existente com base no ID
-  async updateProduct(id, productData) {
-    return await this.model.findByIdAndUpdate(id, productData, { new: true });
+  /**
+   * Atualiza um produto existente
+   * @param {string} id - ID do produto
+   * @param {Object} data - Novos dados do produto
+   * @returns {ProductDTO|null} - Produto atualizado em DTO ou null se não existir
+   */
+  async update(id, data) {
+    const updatedProduct = await this.productDAO.update(id, data);
+    return updatedProduct ? new ProductDTO(updatedProduct) : null;
   }
 
-  // Método para deletar um produto com base no ID
-  async deleteProduct(id) {
-    return await this.model.findByIdAndDelete(id);
-  }
-
-  // NOVO MÉTODO ADICIONADO AQUI
-  // Método para atualizar o estoque de um produto específico
-  // identificado por `id`, com o novo valor `newStock`
-  async updateProductStock(id, newStock) {
-    return await this.model.findByIdAndUpdate(id, { $set: { stock: newStock } }, { new: true });
+  /**
+   * Exclui permanentemente um produto
+   * @param {string} id - ID do produto
+   * @returns {Object} - Resultado da operação de exclusão
+   */
+  async delete(id) {
+    return await this.productDAO.delete(id);
   }
 }
-
-export const productRepository = new ProductRepository();
-

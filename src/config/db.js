@@ -1,11 +1,12 @@
 // Importa o Mongoose para interação com MongoDB
 import mongoose from 'mongoose';
+import config from '../config/config.js';
 
 // Função de conexão com o banco de dados
 export const connectDB = async () => {
   try {
     // Configuração da conexão
-    await mongoose.connect('mongodb+srv://<USUARIO>:<SENHA>@<CLUSTER>.mongodb.net/ecommerce', {
+    await mongoose.connect(config.MONGO_URI, {
       useNewUrlParser: true,       // Usa novo parser de URL
       useUnifiedTopology: true     // Usa novo engine de descoberta de servidores
     });
