@@ -1,7 +1,7 @@
 // src/controllers/products.controller.js
 
 // CORREÇÃO: Removemos as chaves {} do import para usar o export default do service.
-import { productService } from '../services/products.service.js';
+import  productService  from '../services/products.service.js';
 import CustomError from '../utils/errors/CustomError.js';
 import EErrors from '../utils/errors/errorDictionary.js';
 import { generateProductErrorInfo } from '../utils/errors/info.js';

@@ -3,109 +3,131 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { Strategy as JWTStrategy, ExtractJwt } from 'passport-jwt';
 
-import AuthService from '../services/auth.service.js';
-import UserService from '../services/user.service.js';
+// Serviços e utilitários necessários
+import authService from '../services/auth.service.js';
+import userService from '../services/user.service.js';
 import { cookieExtractor } from '../utils/cookieExtractor.js';
 import config from './config.js';
 
+/**
+ * Configura todas as estratégias de autenticação do Passport
+ */
 export function initializePassport() {
-  const authService = new AuthService();
-  const userService = new UserService();
-
-  // Estratégia de Registro Local (email/senha)
+  // =====================================================================
+  // ESTRATÉGIA DE REGISTRO LOCAL (email/senha)
+  // =====================================================================
   passport.use('register', new LocalStrategy(
     {
-      usernameField: 'email',   // Campo usado como identificador
-      passReqToCallback: true   // Permite acesso ao objeto 'req'
+      usernameField: 'email',       // Campo usado como identificador
+      passReqToCallback: true       // Permite acesso ao objeto req completo
     },
     async (req, email, password, done) => {
       try {
-        // Cria novo usuário usando dados do corpo da requisição
+        // Tenta registrar o usuário com dados da requisição
         const user = await authService.register({ ...req.body, password });
-        return done(null, user);  // Sucesso: retorna usuário criado
+
+        // Registro bem-sucedido: passa usuário para próximo middleware
+        return done(null, user);
       } catch (err) {
-        // Falha: retorna mensagem de erro
+        // Falha no registro: passa mensagem de erro
         return done(null, false, { message: err.message });
       }
     }
   ));
 
-  // Estratégia de Login Local
+  // =====================================================================
+  // ESTRATÉGIA DE LOGIN LOCAL (email/senha)
+  // =====================================================================
   passport.use('login', new LocalStrategy(
-    { usernameField: 'email' },  // Usa email como identificador
+    { usernameField: 'email' },     // Identificador é o email
     async (email, password, done) => {
       try {
-        // Autentica usuário com email e senha
+        // Valida credenciais com serviço de autenticação
         const user = await authService.login(email, password);
-        return done(null, user);  // Sucesso
+
+        // Login válido: passa objeto do usuário
+        return done(null, user);
       } catch (err) {
-        // Falha na autenticação
+        // Credenciais inválidas: retorna erro
         return done(null, false, { message: err.message });
       }
     }
   ));
 
-  // Estratégia de Autenticação com GitHub (OAuth)
+  // =====================================================================
+  // ESTRATÉGIA DE AUTENTICAÇÃO COM GITHUB (OAuth)
+  // =====================================================================
   passport.use('github', new GitHubStrategy(
     {
-      clientID: config.GITHUB_CLIENT_ID,          // ID do app GitHub
-      clientSecret: config.GITHUB_CLIENT_SECRET,  // Chave secreta
-      callbackURL: config.GITHUB_CALLBACK_URL     // URL de retorno
+      clientID: config.GITHUB_CLIENT_ID,         // Credenciais da app GitHub
+      clientSecret: config.GITHUB_CLIENT_SECRET,
+      callbackURL: config.GITHUB_CALLBACK_URL    // URL de retorno
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Obtém email do perfil ou gera um padrão
+        // Tenta obter email do perfil GitHub ou cria um placeholder
         const email = profile._json.email || `${profile.username}@github.com`;
 
         // Verifica se usuário já existe
         let user = await userService.getUserByEmail(email);
 
+        // Cria novo usuário se não existir
         if (!user) {
-          // Cria novo usuário para contas GitHub
           user = await userService.createUser({
             first_name: profile.displayName || profile.username,
-            last_name: '',  // GitHub não fornece sobrenome
+            last_name: '',
             email: email,
-            password: '',    // Sem senha (autenticação social)
-            githubId: profile.id,  // ID único do GitHub
-            role: 'user'    // Papel padrão
+            password: '',               // Sem senha (autenticação social)
+            githubId: profile.id,       // Salva ID do GitHub
+            role: 'user'                // Papel padrão
           });
         }
-        return done(null, user);  // Retorna usuário existente/novo
+
+        // Autenticação bem-sucedida
+        return done(null, user);
       } catch (err) {
-        return done(err);  // Erro no processo
+        // Tratamento de erros no fluxo OAuth
+        return done(err);
       }
     }
   ));
 
-  // Estratégia JWT para autenticação stateless
+  // =====================================================================
+  // ESTRATÉGIA JWT (PARA ROTAS PROTEGIDAS)
+  // =====================================================================
   passport.use('jwt', new JWTStrategy(
     {
-      jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),  // Extrai JWT dos cookies
-      secretOrKey: config.SECRET_KEY  // Chave para verificar assinatura
+      // Extrai token JWT de cookies
+      jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
+      secretOrKey: config.SECRET_KEY     // Chave para verificar assinatura
     },
     async (jwtPayload, done) => {
       try {
-        // Payload JWT já contém dados do usuário (sem necessidade de DB)
-        return done(null, jwtPayload);  // Autenticação válida
+        // Payload já contém dados do usuário decodificados
+        return done(null, jwtPayload.user);
       } catch (err) {
-        return done(err);  // Token inválido/expirado
+        // Token inválido ou expirado
+        return done(err);
       }
     }
   ));
 
-  // Serialização: armazena apenas ID do usuário na sessão
+  // =====================================================================
+  // SERIALIZAÇÃO/DESSERIALIZAÇÃO (PARA SESSÕES)
+  // =====================================================================
+
+  // Salva apenas ID do usuário na sessão
   passport.serializeUser((user, done) => {
-    done(null, user._id);  // Salva ID na sessão
+    done(null, user._id);
   });
 
-  // Desserialização: busca usuário completo pelo ID da sessão
+  // Recupera usuário completo do banco usando ID da sessão
   passport.deserializeUser(async (id, done) => {
     try {
       const user = await userService.getUserById(id);
-      done(null, user);  // Adiciona usuário ao req.user
+      done(null, user);
     } catch (err) {
-      done(err);  // Erro na busca
+      done(err);
     }
   });
 }

@@ -1,8 +1,9 @@
+// src/routes/auth.routes.js
 import { Router } from 'express';
 import passport from 'passport';
 import { generateToken } from '../utils/jwt.js';
 import CartModel from '../models/cart.model.js';
-import UserDTO from '../dtos/userDTO.js';
+import UserDTO from '../dtos/UserDTO.js';
 
 const router = Router();
 
@@ -12,13 +13,20 @@ function setAuthCookie(res, token) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Strict',
-    maxAge: 60 * 60 * 1000, // 1h
+    maxAge: 60 * 60 * 1000, // 1 hora
   });
 }
 
-// Wrapper genérico de login (HTML ou API)
+/**
+ * Handler genérico para autenticação de login
+ * @param {Object} req - Objeto de requisição
+ * @param {Object} res - Objeto de resposta
+ * @param {Function} next - Próximo middleware
+ * @param {Boolean} isApi - Indica se é requisição de API (JSON) ou formulário (HTML)
+ */
 function handleLogin(req, res, next, isApi = false) {
   passport.authenticate('login', { session: false }, async (err, user, info) => {
+    // Tratamento de erros gerais
     if (err) {
       console.error('[LOGIN ERROR]', err);
       return isApi
@@ -26,6 +34,7 @@ function handleLogin(req, res, next, isApi = false) {
         : res.redirect('/login?error=1');
     }
 
+    // Verifica se o usuário foi autenticado
     if (!user) {
       const msg = info?.message || 'Credenciais inválidas';
       console.warn('[LOGIN FAIL]', msg);
@@ -35,24 +44,24 @@ function handleLogin(req, res, next, isApi = false) {
     }
 
     try {
+      // Cria payload do token com informações essenciais
       const tokenPayload = {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        cartId: user.cartId?.toString(),
+        user: {
+          _id: user._id,
+          first_name: user.first_name,
+          email: user.email,
+          role: user.role,
+          cartId: user.cartId?.toString(),
+        }
       };
 
+      // Gera token JWT
       const token = generateToken(tokenPayload);
-      if (!token) {
-        console.error('[DEBUG] Falha ao gerar token. Payload:', tokenPayload);
-        return isApi
-          ? res.status(500).json({ status: 'error', error: 'Erro ao gerar token' })
-          : res.redirect('/login?error=2');
-      }
-
       setAuthCookie(res, token);
 
+      // Comportamento para autenticação via formulário
       if (!isApi) {
+        // Armazena dados do usuário na sessão para views
         req.session.user = {
           _id: user._id,
           first_name: user.first_name,
@@ -60,14 +69,15 @@ function handleLogin(req, res, next, isApi = false) {
           role: user.role,
         };
 
-        const cart = await CartModel.findOne({ user: user._id })
-          || await CartModel.create({ user: user._id, products: [] });
+        // Busca ou cria carrinho associado ao usuário
+        const cart = await CartModel.findOne({ user: user._id }) ||
+          await CartModel.create({ user: user._id, products: [] });
 
         req.session.cartId = cart._id;
-
         return res.redirect('/products');
       }
 
+      // Resposta para API
       return res.sendSuccess('Login bem-sucedido');
     } catch (tokenErr) {
       console.error('[TOKEN ERROR]', tokenErr);
@@ -78,34 +88,14 @@ function handleLogin(req, res, next, isApi = false) {
   })(req, res, next);
 }
 
-// ----------------------
-// Registro via Formulário
-// ----------------------
-router.post(
-  '/register/form',
-  passport.authenticate('register', {
-    failureRedirect: '/register?error=1',
-    session: false,
-  }),
-  (req, res) => res.redirect('/login')
-);
+// =============== ROTAS DE REGISTRO ===============
 
-// ----------------------
-// Login via Formulário
-// ----------------------
-router.post('/login/form', (req, res, next) => {
-  handleLogin(req, res, next, false);
-});
-
-// ----------------------
-// Registro via API (SPA/Postman)
-// ----------------------
+// Registro via API (JSON)
 router.post(
   '/register',
   passport.authenticate('register', { session: false }),
   (req, res) => {
     try {
-      // CORREÇÃO: Usar res.sendCreated com um único objeto de payload
       res.sendCreated({
         message: 'Usuário registrado com sucesso',
         user: new UserDTO(req.user)
@@ -117,21 +107,41 @@ router.post(
   }
 );
 
-// ----------------------
-// Login via API (SPA/Postman)
-// ----------------------
+// Registro via Formulário HTML
+router.post(
+  '/register/form',
+  passport.authenticate('register', {
+    failureRedirect: '/register?error=1',
+    session: false,
+  }),
+  (req, res) => res.redirect('/login')
+);
+
+// =============== ROTAS DE LOGIN ===============
+
+// Login via API (JSON)
 router.post('/login', (req, res, next) => {
   handleLogin(req, res, next, true);
 });
 
-// ----------------------
-// Rota /current
-// ----------------------
+// Login via Formulário HTML
+router.post('/login/form', (req, res, next) => {
+  handleLogin(req, res, next, false);
+});
+
+// =============== ROTA DE USUÁRIO ATUAL ===============
+
 router.get(
   '/current',
   passport.authenticate('jwt', { session: false }),
   (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).send({
+          status: 'error',
+          message: 'Não autorizado. Faça o login para continuar.'
+        });
+      }
       const safeUser = new UserDTO(req.user);
       res.sendSuccess({ message: 'Usuário autenticado', user: safeUser });
     } catch (e) {
@@ -141,17 +151,18 @@ router.get(
   }
 );
 
-// ----------------------
-// Logout
-// ----------------------
+// =============== ROTA DE LOGOUT ===============
+
 router.get('/logout', (req, res) => {
   try {
+    // Remove cookie de autenticação
     res.clearCookie('jwtCookieToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'Strict',
     });
 
+    // Comportamento diferenciado para HTML vs API
     if (req.accepts('html')) {
       req.logout(() => res.redirect('/login'));
     } else {
@@ -163,43 +174,38 @@ router.get('/logout', (req, res) => {
   }
 });
 
-// --- ROTAS DE AUTENTICAÇÃO COM GITHUB (CORRIGIDAS) ---
+// =============== AUTENTICAÇÃO COM GITHUB ===============
 
-// 1. Inicia o fluxo de autenticação, redirecionando para o GitHub
+// Inicia fluxo de autenticação
 router.get('/github', passport.authenticate('github', { scope: ['user:email'], session: false }));
 
-// 2. Rota de callback que o GitHub chama após a autorização do usuário
+// Callback do GitHub
 router.get(
   '/githubcallback',
-  // O passport.authenticate('github') chama a estratégia. Se for bem-sucedida, o objeto 'user' é colocado em req.user.
   passport.authenticate('github', { failureRedirect: '/login', session: false }),
-
-  // 3. Este handler é executado após a autenticação bem-sucedida.
   (req, res) => {
-    // --- CORREÇÃO PRINCIPAL ---
-    // Criamos um objeto de payload limpo e explícito para garantir que o cartId está incluído.
-    const userPayload = {
-      _id: req.user._id,
-      first_name: req.user.first_name,
-      last_name: req.user.last_name,
-      email: req.user.email,
-      age: req.user.age,
-      cartId: req.user.cartId, // Este é o campo mais importante
-      role: req.user.role
-    };
-    
-    // Geramos o token com este payload limpo.
-    const token = generateToken(userPayload);
+    try {
+      // Cria payload para token
+      const tokenPayload = {
+        user: {
+          _id: req.user._id,
+          first_name: req.user.first_name,
+          email: req.user.email,
+          role: req.user.role,
+          cartId: req.user.cartId?.toString(),
+        }
+      };
 
-    // Definimos o cookie no navegador.
-    res.cookie('jwtCookieToken', token, {
-      httpOnly: true,
-      maxAge: 3600000, // 1 hora
-      sameSite: 'Lax' // Necessário para redirecionamentos
-    });
+      // Gera token e configura cookie
+      const token = generateToken(tokenPayload);
+      setAuthCookie(res, token);
 
-    // Finalmente, redirecionamos para a página de produtos.
-    res.redirect('/products');
+      // Redireciona após autenticação bem-sucedida
+      res.redirect('/products');
+    } catch (error) {
+      console.error('[GITHUB AUTH ERROR]', error);
+      res.redirect('/login?error=3');
+    }
   }
 );
 

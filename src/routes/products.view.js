@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 // CORREÇÃO: Usamos o productService, que é a camada de serviço correta e unificada.
-import { productService } from '../services/products.service.js';
+import  productService  from '../services/products.service.js';
 
 const router = Router();
 

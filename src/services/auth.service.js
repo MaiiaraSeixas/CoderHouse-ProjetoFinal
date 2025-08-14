@@ -1,61 +1,72 @@
-import UserService from './user.service.js';
-import { validatePassword } from '../utils/cryptography.js';
+// src/services/auth.service.js
 
+import userService from './user.service.js';
+import { isValidPassword } from '../utils/cryptography.js';
+
+/**
+ * Serviço de Autenticação
+ * 
+ * Responsável por gerenciar:
+ * - Registro de novos usuários
+ * - Autenticação de usuários existentes (login)
+ * - Atualização de informações de conexão
+ */
 class AuthService {
   constructor() {
-    // Inicializa o serviço de usuários para operações relacionadas
-    this.userService = new UserService();
+    // Injeção de dependência do serviço de usuários
+    this.userService = userService;
   }
 
   /**
    * Registra um novo usuário no sistema
-   * @param {Object} userData - Dados do usuário para registro
-   * @returns {Object} - Usuário registrado
-   * @throws {Error} - Se o usuário já estiver registrado
+   * @param {Object} userData - Dados do usuário para cadastro
+   * @returns {Promise<Object>} Usuário criado
+   * @throws {Error} Se o email já estiver cadastrado
    */
   async register(userData) {
     const { email } = userData;
-    // Verifica se o email já está cadastrado
+
+    // Verifica se já existe usuário com o mesmo email
     const existingUser = await this.userService.getUserByEmail(email);
+
     if (existingUser) {
       throw new Error('Usuário já cadastrado');
     }
 
-    // O serviço de usuário cuida da criptografia da senha e criação do carrinho
+    // Cria novo usuário se o email for único
     return await this.userService.createUser(userData);
   }
 
   /**
    * Autentica um usuário existente
    * @param {string} email - Email do usuário
-   * @param {string} password - Senha não criptografada
-   * @returns {Object} - Dados do usuário autenticado (sem senha)
-   * @throws {Error} - Se as credenciais forem inválidas
+   * @param {string} password - Senha fornecida
+   * @returns {Promise<Object>} Objeto do usuário autenticado (sem métodos Mongoose)
+   * @throws {Error} Se usuário não existir ou senha for inválida
    */
   async login(email, password) {
-    /**
-     * IMPORTANTE: Para autenticação, precisamos do objeto completo do usuário,
-     * incluindo a senha criptografada. O serviço de usuário deve ter um método
-     * específico que retorne o usuário com o campo de senha para fins de login.
-     */
+    // Busca usuário como documento Mongoose completo (para operações de atualização)
     const user = await this.userService.getUserByEmailForAuth(email);
 
-    // Valida se o usuário existe
+    // Valida existência do usuário
     if (!user) {
       throw new Error('Usuário não encontrado');
     }
 
-    // Valida se a senha está correta
-    const isValid = validatePassword(password, user.password);
+    // Atualiza timestamp da última conexão
+    user.last_connection = new Date();
+    await user.save();  // Persiste a data de conexão no banco
+
+    // Verifica correspondência da senha com o hash armazenado
+    const isValid = isValidPassword(password, user.password);
     if (!isValid) {
       throw new Error('Senha inválida');
     }
 
-    // Remove a senha antes de retornar os dados do usuário
-    const { password: _, ...safeUser } = user;
-
-    return safeUser;
+    // Converte para objeto JavaScript puro (remove métodos e metadados do Mongoose)
+    return user.toObject();
   }
 }
 
+// Exporta instância singleton do serviço
 export default new AuthService();

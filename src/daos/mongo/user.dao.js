@@ -11,6 +11,12 @@ class UserDAO {
     return await UserModel.findOne({ email }).lean();
   }
 
+    // NOVO MÉTODO: Busca usuário para autenticação, SEM usar .lean()
+  // Isso é crucial para que a senha possa ser comparada pelo bcrypt.
+  async findByEmailForAuth(email) {
+    return await UserModel.findOne({ email });
+  }
+
   // Cria um novo usuário no sistema
   async create(userData) {
     const newUser = new UserModel(userData);
