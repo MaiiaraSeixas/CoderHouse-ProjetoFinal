@@ -95,27 +95,3 @@ describe('Teste de Unidade para UserDAO', () => {
 });
 
 
-
-
-//   it('Deve criar um novo utilizador', async () => {
-//     const newUserDa_ta = {
-//       first_name: 'New',
-//       last_name: 'User',
-//       email: 'new.user@example.com',
-//       password: 'hashedpassword'
-//     };
-//     const createdUserMock = { ...newUserDa_ta, _id: 'some-new-id' };
-
-//     // Para o 'create', o método do Mongoose é estático, então o stub é direto no UserModel.
-//     // Também simulamos o método '.save()' que é chamado no DAO.
-//     sinon.stub(UserModel.prototype, 'save').resolves(createdUserMock);
-
-//     const userDao = new UserDAO();
-//     // O resultado do 'create' no DAO é o resultado do 'save', então não precisamos de o verificar.
-//     // Apenas chamamos o método.
-//     const result = await userDao.create(newUserDa_ta);
-
-//     // Verificamos se o resultado retornado é o esperado.
-//     expect(result).to.deep.equal(createdUserMock);
-//   });
-// });

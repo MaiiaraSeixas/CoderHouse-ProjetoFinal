@@ -1,5 +1,3 @@
-// src/routes/users.routes.js
-
 import { Router } from 'express';
 import passport from 'passport';
 import {
@@ -12,109 +10,87 @@ import {
 import handlePolicies from '../middlewares/handlePolicies.js';
 import uploader from '../utils/multer.js';
 
-// Cria o roteador para as rotas de usuários
+// Cria uma instância do roteador do Express
 const router = Router();
 
-// src/tests/products.service.test.js
-
-import { expect } from 'chai';
-import sinon from 'sinon';
-import ProductRepository from '../repositories/product.repository.js';
-import ProductService from '../services/products.service.js';
-
-describe('Teste de Unidade para ProductService', () => {
-	let productService;
-	let productRepositoryStub;
-
-	beforeEach(() => {
-		productRepositoryStub = sinon.createStubInstance(ProductRepository);
-		// CORREÇÃO: Instanciamos a classe para o teste
-		productService = new ProductService();
-		// Injetamos o stub na instância
-		productService.productRepository = productRepositoryStub;
-	});
-
-	afterEach(() => {
-		sinon.restore();
-	});
-
-	it('Deve chamar o repositório para obter produtos com os parâmetros corretos', async () => {
-		const params = { limit: 5, page: 2, sort: 'asc', query: 'Eletrônicos' };
-		const expectedFilter = { category: 'Eletrônicos' };
-		const expectedOptions = { page: 2, limit: 5, lean: true, sort: { price: 1 } };
-
-		productRepositoryStub.get.resolves({ docs: [], totalPages: 1 });
-		await productService.getProducts(params);
-		expect(productRepositoryStub.get.calledOnceWith(expectedFilter, sinon.match(expectedOptions))).to.be.true;
-	});
-
-	it('Deve lançar um erro ao tentar adicionar um produto sem título', async () => {
-		const invalidProduct = { price: 150 };
-		try {
-			await productService.addProduct(invalidProduct);
-			expect.fail('O serviço deveria ter lançado um erro');
-		} catch (error) {
-			expect(error.message).to.equal('Título e preço são campos obrigatórios.');
-			expect(productRepositoryStub.create.called).to.be.false;
-		}
-	});
-
-	it('Deve chamar o repositório para criar um produto com dados válidos', async () => {
-		const validProduct = { title: 'Produto Válido', price: 100, category: 'Teste' };
-		productRepositoryStub.create.resolves(validProduct);
-		const result = await productService.addProduct(validProduct);
-		expect(productRepositoryStub.create.calledOnceWith(validProduct)).to.be.true;
-		expect(result).to.deep.equal(validProduct);
-	});
-});
-
-// Rota para obter todos os usuários (apenas ADMIN)
+/**
+ * Rota: GET /api/users
+ * Descrição: Obtém todos os usuários cadastrados no sistema
+ * Acesso: Exclusivo para administradores
+ * 
+ * Middlewares:
+ * 1. passport.authenticate('jwt'): Verifica se o usuário está autenticado via JWT
+ * 2. handlePolicies(['ADMIN']): Verifica se o usuário tem permissão de ADMIN
+ * 3. getAllUsers: Controller que executa a lógica de negócio
+ */
 router.get('/',
-	// Autenticação via JWT
 	passport.authenticate('jwt', { session: false }),
-	// Verificação de política de acesso (somente ADMIN)
 	handlePolicies(['ADMIN']),
-	// Controller que busca todos os usuários
 	getAllUsers
 );
 
-// Rota para obter um usuário específico por ID (apenas ADMIN)
+/**
+ * Rota: GET /api/users/:uid
+ * Descrição: Obtém um usuário específico pelo seu ID
+ * Acesso: Exclusivo para administradores
+ * 
+ * Parâmetros:
+ * - uid: ID do usuário a ser recuperado
+ */
 router.get('/:uid',
 	passport.authenticate('jwt', { session: false }),
 	handlePolicies(['ADMIN']),
-	// Controller que busca um usuário pelo ID
 	getUserById
 );
 
-// Rota para deletar um usuário (apenas ADMIN)
+/**
+ * Rota: DELETE /api/users/:uid
+ * Descrição: Exclui permanentemente um usuário do sistema
+ * Acesso: Exclusivo para administradores
+ * 
+ * Parâmetros:
+ * - uid: ID do usuário a ser excluído
+ */
 router.delete('/:uid',
 	passport.authenticate('jwt', { session: false }),
 	handlePolicies(['ADMIN']),
-	// Controller que remove um usuário
 	deleteUser
 );
 
-// Rota para upload de documentos do usuário
-// IMPORTANTE: A ordem dos middlewares é crucial
+/**
+ * Rota: POST /api/users/:uid/documents
+ * Descrição: Faz upload de documentos para um usuário específico
+ * Acesso: Usuário autenticado (pode enviar documentos para seu próprio perfil)
+ * 
+ * Middlewares importantes:
+ * 1. Autenticação JWT: Verifica identidade do usuário
+ * 2. uploader.array(): Middleware do Multer para processar uploads
+ *    - 'document': Nome do campo no formulário
+ *    - 5: Número máximo de arquivos permitidos
+ * 3. uploadDocuments: Controller que processa os metadados dos arquivos
+ * 
+ * Parâmetros:
+ * - uid: ID do usuário que receberá os documentos
+ */
 router.post('/:uid/documents',
-	// 1. Primeiro autentica o usuário (para ter req.user disponível)
 	passport.authenticate('jwt', { session: false }),
-
-	// 2. Depois processa o upload de arquivos
-	// Permite até 5 arquivos com o campo name="document"
 	uploader.array('document', 5),
-
-	// 3. Controller que salva os metadados dos documentos
 	uploadDocuments
 );
 
-// Rota para alterar o role do usuário (apenas ADMIN)
+/**
+ * Rota: PUT /api/users/premium/:uid
+ * Descrição: Atualiza o role de um usuário para premium
+ * Acesso: Exclusivo para administradores
+ * 
+ * Parâmetros:
+ * - uid: ID do usuário a ser atualizado
+ */
 router.put('/premium/:uid',
 	passport.authenticate('jwt', { session: false }),
 	handlePolicies(['ADMIN']),
-	// Controller que atualiza o role do usuário
 	changeUserRole
 );
 
-// Exporta o roteador configurado
+// Exporta o roteador configurado para uso na aplicação
 export default router;

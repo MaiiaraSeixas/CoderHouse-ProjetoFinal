@@ -1,49 +1,42 @@
+// src/daos/mongo/ticket.dao.js
 import { TicketModel } from '../../models/ticket.model.js';
 
-class TicketDAO {
-  // Busca um ticket pelo ID, retornando um objeto simples (lean)
+// Classe Data Access Object (DAO) para operações com tickets
+export class TicketDAO {
+
+  // Busca um ticket pelo ID
   async findById(id) {
+    // Retorna o ticket como objeto JavaScript puro (sem métodos do Mongoose)
     return await TicketModel.findById(id).lean();
   }
 
-  // Busca um ticket pelo seu código único
+  // Busca um ticket pelo código (campo único)
   async findByCode(code) {
+    // Encontra o primeiro ticket com o código especificado
     return await TicketModel.findOne({ code }).lean();
   }
 
-  // Cria um novo ticket de compra
+  // Cria um novo ticket
   async create(ticketData) {
-    /**
-     * O modelo de Ticket já define automaticamente:
-     * - _id: Identificador único (ObjectId)
-     * - code: Código único gerado automaticamente
-     * - purchase_datetime: Data/hora atual da compra
-     */
+    // Cria uma nova instância do modelo com os dados recebidos
     const newTicket = new TicketModel(ticketData);
+    // Persiste o novo ticket no banco e retorna o resultado
     return await newTicket.save();
   }
 
-  /**
-   * Atualiza um ticket existente
-   * NOTA: Tickets normalmente são imutáveis após criação
-   * (Mantido para completar a interface DAO)
-   */
+  // Atualiza um ticket existente
   async update(id, ticketData) {
+    // Atualiza o ticket e retorna a versão atualizada
     return await TicketModel.findByIdAndUpdate(
-      id,
-      ticketData,
-      { new: true }  // Retorna a versão atualizada do documento
-    ).lean();
+      id,           // ID do ticket a ser atualizado
+      ticketData,   // Novos dados do ticket
+      { new: true } // Opção para retornar o documento ATUALIZADO
+    ).lean();       // Retorna como objeto simples
   }
 
-  /**
-   * Exclui um ticket do sistema
-   * NOTA: Normalmente tickets não são deletados (para manter histórico)
-   * (Mantido para completar a interface DAO)
-   */
+  // Exclui um ticket
   async delete(id) {
+    // Remove permanentemente o ticket do banco
     return await TicketModel.findByIdAndDelete(id);
   }
 }
-
-export default new TicketDAO();

@@ -1,4 +1,6 @@
-// Importando bibliotecas necessárias para os testes
+// src/tests/auth.router.test.js
+
+// Importação de bibliotecas necessárias para os testes
 import { expect } from 'chai';          // Biblioteca de asserções
 import supertest from 'supertest';      // Cliente HTTP para testes de integração
 import mongoose from 'mongoose';        // ORM para MongoDB
@@ -21,34 +23,37 @@ describe('Teste de Integração da Rota de Autenticação', () => {
 	};
 	let authTokenCookie;  // Armazenará o cookie de autenticação
 
-	// Hook executado APÓS todos os testes deste describe
-	after(async function () {
-		this.timeout(5000);  // Aumenta timeout para operações de limpeza
-		// Remove usuários criados nos testes (com email contendo 'auth-tester')
-		await mongoose.connection.collection('users').deleteMany({ email: { $regex: /auth-tester/ } });
-		// Limpa todos os carrinhos criados durante os testes
-		await mongoose.connection.collection('carts').deleteMany({});
-	});
+	// // Hook executado APÓS todos os testes deste describe
+	// after(async function () {
+	// 	this.timeout(5000);  // Aumenta timeout para operações de limpeza
+	// 	// Remove usuários criados nos testes (com email contendo 'auth-tester')
+	// 	await mongoose.connection.collection('users').deleteMany({ email: { $regex: /auth-tester/ } });
+	// 	// Limpa todos os carrinhos criados durante os testes
+	// 	await mongoose.connection.collection('carts').deleteMany({});
+	// });
 
 	// Contexto: Testes de registro de usuário
 	context('Registro de Usuário (POST /api/sessions/register)', () => {
 		// Teste: Registro bem-sucedido
 		it('Deve registrar um novo usuário com sucesso e retornar status 201', async function () {
 			this.timeout(7000);  // Aumenta timeout para operação
+			// Envia requisição POST para registrar o usuário mockado
 			const response = await requester.post('/api/sessions/register').send(userMock);
 
 			// Verificações:
 			expect(response.status).to.equal(201);  // Status HTTP Created
-			expect(response.body.payload.user).to.have.property('email', userMock.email);  // Confirma email
+			// Confirma que o email do usuário retornado é o mesmo do mock
+			expect(response.body.payload.user).to.have.property('email', userMock.email);
 		});
 
 		// Teste: Tentativa de registro com email duplicado
 		it('Deve retornar erro 400 ao tentar registrar um usuário com email duplicado', async () => {
+			// Tenta registrar o mesmo usuário novamente
 			const response = await requester.post('/api/sessions/register').send(userMock);
 
 			// Verificações:
 			expect(response.status).to.equal(400);  // Status HTTP Bad Request
-			expect(response.body.error).to.equal('Usuário já cadastrado');  // Mensagem de erro
+			expect(response.body.error).to.equal('Usuário já cadastrado');  // Mensagem de erro esperada
 		});
 	});
 
@@ -56,7 +61,9 @@ describe('Teste de Integração da Rota de Autenticação', () => {
 	context('Login de Usuário (POST /api/sessions/login)', () => {
 		// Teste: Login bem-sucedido
 		it('Deve fazer o login de um usuário com sucesso e retornar um cookie de autenticação', async () => {
+			// Credenciais usando os dados do usuário mockado
 			const credentials = { email: userMock.email, password: userMock.password };
+			// Envia requisição POST para login
 			const response = await requester.post('/api/sessions/login').send(credentials);
 
 			// Verificações:
@@ -70,12 +77,13 @@ describe('Teste de Integração da Rota de Autenticação', () => {
 		// Teste: Tentativa de login com senha inválida
 		it('Deve retornar erro 401 ao tentar fazer login com senha incorreta', async function () {
 			this.timeout(5000);  // Aumenta timeout
+			// Credenciais com senha errada
 			const credentials = { email: userMock.email, password: 'wrong-password' };
 			const response = await requester.post('/api/sessions/login').send(credentials);
 
 			// Verificações:
 			expect(response.status).to.equal(401);  // Status HTTP Unauthorized
-			expect(response.body.error).to.equal('Senha inválida');  // Mensagem de erro
+			expect(response.body.error).to.equal('Senha inválida');  // Mensagem de erro esperada
 		});
 	});
 
@@ -83,21 +91,25 @@ describe('Teste de Integração da Rota de Autenticação', () => {
 	context('Verificação de Sessão (GET /api/sessions/current)', () => {
 		// Teste: Recuperação de dados do usuário autenticado
 		it('Deve retornar os dados do usuário autenticado ao enviar um cookie válido', async () => {
-			// Faz requisição enviando o cookie de autenticação salvo
-			const response = await requester.get('/api/sessions/current').set('Cookie', authTokenCookie);
+			// Faz requisição GET enviando o cookie de autenticação salvo
+			const response = await requester
+				.get('/api/sessions/current')
+				.set('Cookie', authTokenCookie);
 
 			// Verificações:
 			expect(response.status).to.equal(200);  // Status HTTP OK
-			expect(response.body.payload.user).to.have.property('email', userMock.email);  // Email confere
+			// Confirma que o email do usuário retornado é o esperado
+			expect(response.body.payload.user).to.have.property('email', userMock.email);
 		});
 
 		// Teste: Acesso não autorizado sem cookie
 		it('Deve retornar erro 401 ao tentar acessar a rota sem um cookie de autenticação', async () => {
-			const response = await requester.get('/api/sessions/current');  // Sem cookie
+			// Requisição GET sem enviar cookie
+			const response = await requester.get('/api/sessions/current');
 
 			// Verificações:
 			expect(response.status).to.equal(401);  // Status HTTP Unauthorized
-			expect(response.body.message).to.equal('Não autorizado. Faça o login para continuar.');  // Mensagem
+			expect(response.body.message).to.equal('Não autorizado. Faça o login para continuar.');  // Mensagem esperada
 		});
 	});
 });

@@ -1,4 +1,6 @@
 import ProductRepository from '../repositories/product.repository.js';
+import CustomError from '../utils/errors/CustomError.js';
+import EErrors from '../utils/errors/errorDictionary.js';
 
 // Exportamos a CLASSE para que possa ser usada em testes
 export class ProductService {
@@ -29,9 +31,25 @@ export class ProductService {
 	 * Obtém um produto específico pelo ID
 	 * @param {string} id - ID do produto
 	 */
+
+	// (Fragmento do método getProductById)
 	async getProductById(id) {
-		return await this.productRepository.getById(id);
+		const product = await this.productRepository.getById(id);
+		if (!product) {
+			// Lança um erro personalizado que o errorHandler converte para 404
+			CustomError.createError({
+				name: 'Erro ao Encontrar Produto',
+				cause: `Produto com ID ${id} não encontrado.`,
+				message: 'Produto não encontrado.',
+				code: EErrors.PRODUCT_NOT_FOUND
+			});
+		}
+		return product;
 	}
+
+	// async getProductById(id) {
+	// 	return await this.productRepository.getById(id);
+	// }
 
 	/**
 	 * Adiciona um novo produto ao sistema
@@ -49,7 +67,13 @@ export class ProductService {
 	 * @param {string} id - ID do produto
 	 * @param {Object} productData - Novos dados do produto
 	 */
+	// async updateProduct(id, productData) {
+	// 	return await this.productRepository.update(id, productData);
+	// }
+
 	async updateProduct(id, productData) {
+		// Primeiro, verifica se o produto existe
+		await this.getProductById(id);
 		return await this.productRepository.update(id, productData);
 	}
 
@@ -57,10 +81,17 @@ export class ProductService {
 	 * Remove permanentemente um produto
 	 * @param {string} id - ID do produto
 	 */
+	// 	async deleteProduct(id) {
+	// 		return await this.productRepository.delete(id);
+	// 	}
+	// }
 	async deleteProduct(id) {
+		// Primeiro, verifica se o produto existe
+		await this.getProductById(id);
 		return await this.productRepository.delete(id);
 	}
 }
+
 
 // Exportamos a INSTÂNCIA como default para a aplicação usar
 export default new ProductService();

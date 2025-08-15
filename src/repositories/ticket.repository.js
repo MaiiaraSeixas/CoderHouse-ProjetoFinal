@@ -1,46 +1,35 @@
-import ticketDAO from '../daos/mongo/ticket.dao.js';
-import TicketDTO from '../dtos/TicketDTO.js';
+// src/repositories/ticket.repository.js
+import { TicketDAO } from '../daos/mongo/ticket.dao.js';  // Importa o DAO de tickets
+import TicketDTO from '../dtos/TicketDTO.js';             // Importa o DTO (Data Transfer Object) para tickets
 
+// Classe que implementa o padrão Repository para tickets
 export default class TicketRepository {
   constructor() {
-    // Inicializa o DAO para operações com tickets
-    this.ticketDAO = ticketDAO;
+    // Instancia o DAO de tickets para interação com o banco de dados
+    this.ticketDAO = new TicketDAO();
   }
 
-  /**
-   * Busca um ticket pelo ID
-   * @param {string} id - ID do ticket
-   * @returns {TicketDTO|null} - Ticket convertido para DTO ou null se não encontrado
-   */
+  // Obtém um ticket pelo ID
   async getById(id) {
+    // Busca o ticket usando o método do DAO
     const ticket = await this.ticketDAO.findById(id);
-    // Retorna DTO se encontrado, caso contrário null
+    // Se encontrado, converte para DTO; caso contrário retorna null
     return ticket ? new TicketDTO(ticket) : null;
   }
 
-  /**
-   * Busca um ticket pelo código único
-   * @param {string} code - Código do ticket
-   * @returns {TicketDTO|null} - Ticket convertido para DTO ou null se não encontrado
-   */
+  // Obtém um ticket pelo código único
   async getByCode(code) {
+    // Usa o método especializado do DAO para buscar por código
     const ticket = await this.ticketDAO.findByCode(code);
+    // Converte para DTO se encontrado, senão retorna null
     return ticket ? new TicketDTO(ticket) : null;
   }
 
-  /**
-   * Cria um novo ticket
-   * @param {Object} data - Dados do ticket (ex: amount, purchaser, products)
-   * @returns {TicketDTO} - Novo ticket convertido para DTO
-   */
+  // Cria um novo ticket
   async create(data) {
-    /**
-     * O DAO já gera automaticamente:
-     * - _id: Identificador único
-     * - code: Código único gerado automaticamente
-     * - purchase_datetime: Data/hora atual da compra
-     */
+    // Persiste o novo ticket no banco usando o DAO
     const newTicket = await this.ticketDAO.create(data);
+    // Retorna o ticket criado convertido para DTO
     return new TicketDTO(newTicket);
   }
 }

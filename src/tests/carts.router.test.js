@@ -74,10 +74,12 @@ describe('Teste de Integração da Rota de Carrinhos', () => {
 
 		// Geração manual do token JWT com as informações essenciais
 		const token = generateToken({
+			user: {
 			_id: testUser._id.toString(),
 			email: testUser.email,
 			role: testUser.role,
 			cartId: userCartId
+			}
 		});
 
 		// Monta o cookie que será enviado na maioria das rotas para autenticação

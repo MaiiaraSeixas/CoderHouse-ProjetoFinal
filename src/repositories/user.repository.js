@@ -1,4 +1,4 @@
-import {userDAO} from '../daos/mongo/user.dao.js';
+import userDAO from '../daos/mongo/user.dao.js';
 import UserDTO from '../dtos/UserDTO.js';
 
 export default class UserRepository {

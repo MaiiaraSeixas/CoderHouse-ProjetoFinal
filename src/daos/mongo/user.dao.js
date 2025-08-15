@@ -43,6 +43,6 @@ export class UserDAO {
   }
 }
 
-// const userDAO = new UserDAO(); // Exporta uma instância do UserDAO
-// // Isso permite que outros módulos importem diretamente a instância já configurada.
-// export default new UserDAO();
+const userDAO = new UserDAO(); // Exporta uma instância do UserDAO
+// Isso permite que outros módulos importem diretamente a instância já configurada.
+export default new UserDAO();

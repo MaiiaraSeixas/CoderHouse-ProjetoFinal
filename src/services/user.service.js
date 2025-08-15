@@ -3,10 +3,7 @@
 import UserModel from '../models/user.model.js';
 import CartModel from '../models/cart.model.js';
 import { createHash } from '../utils/cryptography.js';
-import {userDAO} from '../daos/mongo/user.dao.js';
-
-// Cria instância do DAO
-const userDAO = new userDAO();
+import userDAO from '../daos/mongo/user.dao.js';
 
 // Lista de documentos obrigatórios para se tornar usuário premium
 const REQUIRED_DOCUMENTS = [
@@ -22,7 +19,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserByEmail(email) {
-    return await userdao.findByEmail(email);
+    return await userDAO.findByEmail(email);
   }
 
   /**
@@ -31,7 +28,7 @@ class UserService {
    * @returns {Promise<Document>} Documento Mongoose completo
    */
   async getUserByEmailForAuth(email) {
-    return await userdao.findByEmailForAuth(email);
+    return await userDAO.findByEmailForAuth(email);
   }
 
   /**
@@ -40,7 +37,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserById(id) {
-    return await userdao.findById(id);
+    return await userDAO.findById(id);
   }
 
   /**
@@ -94,7 +91,7 @@ class UserService {
    * @returns {Promise<Array>} Lista de usuários
    */
   async getAllUsers() {
-    return await userdao.findAll();
+    return await userDAO.findAll();
   }
 
   /**
@@ -145,9 +142,9 @@ class UserService {
     if (user.role === 'admin') return user;
 
     // Verifica documentos obrigatórios
-    const userDocNames = user.documents.map(doc => doc.name);
-    const hasAllDocuments = REQUIRED_DOCUMENTS.every(doc =>
-      userDocNames.includes(doc)
+    const userDocNames = user.documents.map(doc => doc.name.split('.')[0]);
+    const hasAllDocuments = REQUIRED_DOCUMENTS.every(requiredDoc =>
+      userDocNames.some(docName => docName.includes(requiredDoc))
     );
 
     // Valida documentos faltantes
