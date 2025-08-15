@@ -1,7 +1,7 @@
 // ===== ARQUIVO ATUALIZADO: controllers/cart.controller.js =====
 // Controlador com a nova rota de compra.
 
-import { cartService } from "../services/cart.service.js"; // Importa o serviço de carrinho
+import cartService from "../services/cart.service.js"; // Importa o serviço de carrinho
 
 class CartController {
 	// Controlador para finalizar a compra de um carrinho

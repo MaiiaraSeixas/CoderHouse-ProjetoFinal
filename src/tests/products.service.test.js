@@ -3,7 +3,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import ProductRepository from '../repositories/product.repository.js';
-import ProductService from '../services/products.service.js';
+import { ProductService } from '../services/products.service.js'
 
 /**
  * Conjunto de testes de unidade para o ProductService

@@ -93,17 +93,20 @@ function handleLogin(req, res, next, isApi = false) {
 // Registro via API (JSON)
 router.post(
   '/register',
-  passport.authenticate('register', { session: false }),
-  (req, res) => {
-    try {
+  (req, res, next) => {
+    passport.authenticate('register', { session: false }, (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        // A mensagem de erro vem do 'done' na estratégia do passport
+        return res.status(400).json({ status: 'error', error: info.message });
+      }
       res.sendCreated({
         message: 'Usuário registrado com sucesso',
-        user: new UserDTO(req.user)
+        user: new UserDTO(user)
       });
-    } catch (e) {
-      console.error('[REGISTER API ERROR]', e);
-      res.status(500).json({ status: 'error', error: 'Erro interno no servidor' });
-    }
+    })(req, res, next);
   }
 );
 
@@ -133,15 +136,20 @@ router.post('/login/form', (req, res, next) => {
 
 router.get(
   '/current',
-  passport.authenticate('jwt', { session: false }),
+  (req, res, next) => {
+    passport.authenticate('jwt', { session: false }, (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ status: 'error', message: 'Não autorizado. Faça o login para continuar.' });
+      }
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
   (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).send({
-          status: 'error',
-          message: 'Não autorizado. Faça o login para continuar.'
-        });
-      }
       const safeUser = new UserDTO(req.user);
       res.sendSuccess({ message: 'Usuário autenticado', user: safeUser });
     } catch (e) {

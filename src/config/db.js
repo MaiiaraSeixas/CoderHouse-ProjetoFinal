@@ -5,8 +5,9 @@ import config from '../config/config.js';
 // Função de conexão com o banco de dados
 export const connectDB = async () => {
   try {
+    const mongoUrl = config.NODE_ENV === 'test' ? config.MONGO_URL_TEST : config.MONGO_URL;
     // Configuração da conexão
-    await mongoose.connect(config.MONGO_URI, {
+    await mongoose.connect(mongoUrl, {
       useNewUrlParser: true,       // Usa novo parser de URL
       useUnifiedTopology: true     // Usa novo engine de descoberta de servidores
     });

@@ -172,4 +172,4 @@ class CartService {
 }
 
 // Exporta instância singleton do serviço
-export const cartService = new CartService();
+export default new CartService();

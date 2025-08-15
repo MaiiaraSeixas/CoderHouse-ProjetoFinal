@@ -1,6 +1,6 @@
 import UserModel from '../../models/user.model.js';
 
-class UserDAO {
+export class UserDAO {
   // Busca um usuário pelo ID, retornando objeto JavaScript simples
   async findById(id) {
     return await UserModel.findById(id).lean();
@@ -43,4 +43,6 @@ class UserDAO {
   }
 }
 
-export default new UserDAO();
+// const userDAO = new UserDAO(); // Exporta uma instância do UserDAO
+// // Isso permite que outros módulos importem diretamente a instância já configurada.
+// export default new UserDAO();

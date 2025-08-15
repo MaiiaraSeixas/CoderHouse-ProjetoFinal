@@ -3,13 +3,19 @@
 import { expect } from 'chai';
 import sinon from 'sinon'; // Biblioteca para criar mocks e stubs
 import UserModel from '../models/user.model.js'; // O modelo que vamos "simular"
-import UserDAO from '../daos/mongo/user.dao.js'; // A unidade que queremos testar
+import { UserDAO } from '../daos/mongo/user.dao.js'; // A unidade que queremos testar (importando a classe)userDAO from '../daos/mongo/user.dao.js'; // A unidade que queremos testar (importando a instância)
 
 describe('Teste de Unidade para UserDAO', () => {
+  let userDAO; // Instância da classe UserDAO
   // O hook 'beforeEach' é executado antes de cada teste ('it') neste bloco.
   // Usamo-lo para "resetar" os nossos mocks e garantir que um teste não interfira no outro.
   beforeEach(() => {
+    // Criamos uma nova instância do UserDAO antes de cada teste.
+    userDAO = new UserDAO();
     // 'sinon.restore()' limpa todos os stubs, mocks e espiões criados pelo Sinon.
+    sinon.restore();
+  });
+  afterEach(() => {
     sinon.restore();
   });
 
@@ -33,9 +39,8 @@ describe('Teste de Unidade para UserDAO', () => {
       lean: sinon.stub().resolves(userMock) // .resolves para simular uma Promise que resolve
     });
 
-    // 3. EXECUÇÃO: Chamamos o método do DAO que queremos testar.
-    const userDao = new UserDAO();
-    const result = await userDao.findById(userMock._id);
+    // 3. EXECUÇÃO: Chamamos o método do DAO importado diretamente.
+    const result = await userDAO.findById(userMock._id);
 
     // 4. ASSERÇÕES (VERIFICAÇÕES):
     // Verificamos se o resultado é o que esperávamos.
@@ -61,8 +66,7 @@ describe('Teste de Unidade para UserDAO', () => {
       lean: sinon.stub().resolves(userMock)
     });
 
-    const userDao = new UserDAO();
-    const result = await userDao.findByEmail(userMock.email);
+    const result = await userDAO.findByEmail(userMock.email);
 
     expect(result).to.deep.equal(userMock);
     expect(findOneStub.calledOnceWith({ email: userMock.email })).to.be.true;
@@ -82,12 +86,36 @@ describe('Teste de Unidade para UserDAO', () => {
     // Também simulamos o método '.save()' que é chamado no DAO.
     sinon.stub(UserModel.prototype, 'save').resolves(createdUserMock);
 
-    const userDao = new UserDAO();
-    // O resultado do 'create' no DAO é o resultado do 'save', então não precisamos de o verificar.
-    // Apenas chamamos o método.
-    const result = await userDao.create(newUserDa_ta);
+    // Chamamos o método do DAO importado diretamente.
+    const result = await userDAO.create(newUserDa_ta);
 
     // Verificamos se o resultado retornado é o esperado.
     expect(result).to.deep.equal(createdUserMock);
   });
 });
+
+
+
+
+//   it('Deve criar um novo utilizador', async () => {
+//     const newUserDa_ta = {
+//       first_name: 'New',
+//       last_name: 'User',
+//       email: 'new.user@example.com',
+//       password: 'hashedpassword'
+//     };
+//     const createdUserMock = { ...newUserDa_ta, _id: 'some-new-id' };
+
+//     // Para o 'create', o método do Mongoose é estático, então o stub é direto no UserModel.
+//     // Também simulamos o método '.save()' que é chamado no DAO.
+//     sinon.stub(UserModel.prototype, 'save').resolves(createdUserMock);
+
+//     const userDao = new UserDAO();
+//     // O resultado do 'create' no DAO é o resultado do 'save', então não precisamos de o verificar.
+//     // Apenas chamamos o método.
+//     const result = await userDao.create(newUserDa_ta);
+
+//     // Verificamos se o resultado retornado é o esperado.
+//     expect(result).to.deep.equal(createdUserMock);
+//   });
+// });

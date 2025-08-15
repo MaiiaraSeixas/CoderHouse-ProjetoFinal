@@ -3,7 +3,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 // Importa o serviço de carrinho que será testado
-import { cartService } from '../services/cart.service.js';
+import cartService from '../services/cart.service.js';
 
 // Importa serviços que serão mockados (substituídos por versões de teste)
 import productService from '../services/products.service.js';

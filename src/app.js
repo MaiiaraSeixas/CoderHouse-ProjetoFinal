@@ -29,7 +29,7 @@ import mailRoutes from './routes/mail.routes.js';
 import smsRoutes from './routes/sms.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import mockingRoutes from './routes/mocking.routes.js';
-import { cartService } from './services/cart.service.js';
+import cartService  from './services/cart.service.js';
 import ProductModel from './models/product.model.js';
 
 // Diretórios

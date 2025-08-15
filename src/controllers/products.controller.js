@@ -1,7 +1,7 @@
 // src/controllers/products.controller.js
 
 // CORREÇÃO: Removemos as chaves {} do import para usar o export default do service.
-import  productService  from '../services/products.service.js';
+import productService from '../services/products.service.js';
 import CustomError from '../utils/errors/CustomError.js';
 import EErrors from '../utils/errors/errorDictionary.js';
 import { generateProductErrorInfo } from '../utils/errors/info.js';
@@ -91,6 +91,15 @@ class ProductsController {
 		try {
 			const { pid } = req.params;
 			const product = await productService.getProductById(pid);
+			if (!product) {
+				// Se o produto não for encontrado, lança um erro customizado
+				CustomError.createError({
+					name: 'Produto Não Encontrado',
+					cause: `Produto com ID ${pid} não encontrado.`,
+					message: 'Erro ao tentar obter o produto.',
+					code: EErrors.PRODUCT_NOT_FOUND
+				});
+			}
 			res.status(200).json({ status: 'success', payload: product });
 		} catch (error) {
 			next(error);
@@ -108,6 +117,15 @@ class ProductsController {
 			const { pid } = req.params;
 			const productData = req.body;
 			const updatedProduct = await productService.updateProduct(pid, productData);
+			if (!updatedProduct) {
+				// Se o produto não for encontrado, lança um erro customizado
+				CustomError.createError({
+					name: 'Produto Não Encontrado',
+					cause: `Produto com ID ${pid} não encontrado.`,
+					message: 'Erro ao tentar atualizar o produto.',
+					code: EErrors.PRODUCT_NOT_FOUND
+				});
+			}
 			res.status(200).json({ status: 'success', payload: updatedProduct });
 		} catch (error) {
 			next(error);
@@ -123,7 +141,16 @@ class ProductsController {
 	async deleteProduct(req, res, next) {
 		try {
 			const { pid } = req.params;
-			await productService.deleteProduct(pid);
+			const result = await productService.deleteProduct(pid);
+			if (!result) {
+				// Se o produto nao for encontrado, lanca um erro customizado
+				CustomError.createError({
+					name: 'Produto nao encontrado',
+					cause: `Produto com ID ${pid} nao encontrado.`,
+					message: 'Erro ao tentar deletar o produto.',
+					code: EErrors.PRODUCT_NOT_FOUND
+				});
+			}			
 			res.status(200).json({ status: 'success', message: 'Produto deletado com sucesso.' });
 		} catch (error) {
 			next(error);

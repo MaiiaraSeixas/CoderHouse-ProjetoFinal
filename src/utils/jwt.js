@@ -2,17 +2,15 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/config.js';
 
-// 🔐 Chave secreta usada para assinar/verificar os tokens JWT
-const SECRET = process.env.JWT_SECRET || 'secretao';
+
 
 /**
  * Gera um token JWT para o usuário, incluindo cartId
- * @param {Object} user - Dados do usuário que serão armazenados no token
  * @returns {string} Token JWT assinado
  */
-export const generateToken = (user) => {
+export const generateToken = (payload) => {
   return jwt.sign(
-    { user }, // ✅ estrutura esperada pelo JWTStrategy
+    payload, // ✅ estrutura esperada pelo JWTStrategy
     config.SECRET_KEY,
     { expiresIn: '1h' }
   );
@@ -24,9 +22,7 @@ export const generateToken = (user) => {
  * @returns {Object} Payload decodificado se válido, ou erro se inválido
  */
 export const verifyToken = (token) => {
-  return jwt.verify(token, SECRET);
+  return jwt.verify(token, config.SECRET_KEY);
 };
 
 export default { generateToken, verifyToken };
-
-

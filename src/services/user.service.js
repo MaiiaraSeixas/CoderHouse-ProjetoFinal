@@ -3,7 +3,10 @@
 import UserModel from '../models/user.model.js';
 import CartModel from '../models/cart.model.js';
 import { createHash } from '../utils/cryptography.js';
-import userDAO from '../daos/mongo/user.dao.js';
+import {userDAO} from '../daos/mongo/user.dao.js';
+
+// Cria instância do DAO
+const userDAO = new userDAO();
 
 // Lista de documentos obrigatórios para se tornar usuário premium
 const REQUIRED_DOCUMENTS = [
@@ -19,7 +22,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserByEmail(email) {
-    return await userDAO.findByEmail(email);
+    return await userdao.findByEmail(email);
   }
 
   /**
@@ -28,7 +31,7 @@ class UserService {
    * @returns {Promise<Document>} Documento Mongoose completo
    */
   async getUserByEmailForAuth(email) {
-    return await userDAO.findByEmailForAuth(email);
+    return await userdao.findByEmailForAuth(email);
   }
 
   /**
@@ -37,7 +40,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserById(id) {
-    return await userDAO.findById(id);
+    return await userdao.findById(id);
   }
 
   /**
@@ -91,7 +94,7 @@ class UserService {
    * @returns {Promise<Array>} Lista de usuários
    */
   async getAllUsers() {
-    return await userDAO.findAll();
+    return await userdao.findAll();
   }
 
   /**

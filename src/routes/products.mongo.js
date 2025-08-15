@@ -14,7 +14,16 @@ router.get('/:pid', handlePolicies(['PUBLIC']), productsController.getProductByI
 // Rotas protegidas (JWT + políticas)
 router.post(
 	'/',
-	passport.authenticate('jwt', { session: false }),
+	(req, res, next) => {
+		passport.authenticate('jwt', { session: false }, (err, user, info) => {
+			if (err) return next(err);
+			if (!user) {
+				return res.status(401).json({ status: 'error', message: 'Não autenticado' });
+			}
+			req.user = user;
+			next();
+		})(req, res, next);
+	},
 	handlePolicies(['ADMIN', 'PREMIUM']),
 	productsController.createProduct
 );
