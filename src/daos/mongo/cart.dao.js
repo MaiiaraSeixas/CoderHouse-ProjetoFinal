@@ -5,20 +5,20 @@ import CartModel from '../../models/cart.model.js';
 export class CartDAO {
 
   // Busca um carrinho por ID e popula os detalhes dos produtos
-  async findById(id) {
+  async findCartById(id) {
     return await CartModel.findById(id)
       .populate('products.product')  // Substitui IDs de produtos por objetos completos
       .lean();  // Converte documento Mongoose para objeto JavaScript puro
   }
 
   // Cria um novo carrinho no banco de dados
-  async create(cartData) {
+  async createCart(cartData) {
     const newCart = new CartModel(cartData);  // Cria instância do modelo
     return await newCart.save();  // Persiste no banco e retorna o carrinho criado
   }
 
   // Atualiza um carrinho existente
-  async update(id, cartData) {
+  async updateCart(id, cartData) {
     return await CartModel.findByIdAndUpdate(
       id,
       cartData,
@@ -27,7 +27,7 @@ export class CartDAO {
   }
 
   // Exclui um carrinho do banco de dados
-  async delete(id) {
+  async deleteCart(id) {
     return await CartModel.findByIdAndDelete(id);  // Remove permanentemente
   }
 

@@ -19,7 +19,7 @@ describe('Teste de Unidade para UserDAO', () => {
     sinon.restore();
   });
 
-  // --- Teste para o método findById ---
+  // --- Teste para o método findUserById ---
   it('Deve retornar um utilizador pelo seu ID', async () => {
     // 1. DADOS DE MOCK: Criamos um utilizador falso que esperamos que seja retornado.
     const userMock = {
@@ -40,7 +40,7 @@ describe('Teste de Unidade para UserDAO', () => {
     });
 
     // 3. EXECUÇÃO: Chamamos o método do DAO importado diretamente.
-    const result = await userDAO.findById(userMock._id);
+    const result = await userDAO.findUserById(userMock._id);
 
     // 4. ASSERÇÕES (VERIFICAÇÕES):
     // Verificamos se o resultado é o que esperávamos.
@@ -51,7 +51,7 @@ describe('Teste de Unidade para UserDAO', () => {
     expect(findByIdStub.calledWith(userMock._id)).to.be.true;
   });
 
-  // --- Teste para o método findByEmail ---
+  // --- Teste para o método findUserByEmail ---
   it('Deve retornar um utilizador pelo seu email', async () => {
     const userMock = {
       _id: '60d5ecb3b3a3a40015f3b3a5',
@@ -66,13 +66,13 @@ describe('Teste de Unidade para UserDAO', () => {
       lean: sinon.stub().resolves(userMock)
     });
 
-    const result = await userDAO.findByEmail(userMock.email);
+    const result = await userDAO.findUserByEmail(userMock.email);
 
     expect(result).to.deep.equal(userMock);
     expect(findOneStub.calledOnceWith({ email: userMock.email })).to.be.true;
   });
 
-  // --- Teste para o método create ---
+  // --- Teste para o método createUser ---
   it('Deve criar um novo utilizador', async () => {
     const newUserDa_ta = {
       first_name: 'New',
@@ -87,11 +87,9 @@ describe('Teste de Unidade para UserDAO', () => {
     sinon.stub(UserModel.prototype, 'save').resolves(createdUserMock);
 
     // Chamamos o método do DAO importado diretamente.
-    const result = await userDAO.create(newUserDa_ta);
+    const result = await userDAO.createUser(newUserDa_ta);
 
     // Verificamos se o resultado retornado é o esperado.
     expect(result).to.deep.equal(createdUserMock);
   });
 });
-
-

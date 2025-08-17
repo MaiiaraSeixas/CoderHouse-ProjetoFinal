@@ -2,29 +2,29 @@ import UserModel from '../../models/user.model.js';
 
 export class UserDAO {
   // Busca um usuário pelo ID, retornando objeto JavaScript simples
-  async findById(id) {
+  async findUserById(id) {
     return await UserModel.findById(id).lean();
   }
 
   // Busca um usuário pelo email (campo único)
-  async findByEmail(email) {
+  async findUserByEmail(email) {
     return await UserModel.findOne({ email }).lean();
   }
 
     // NOVO MÉTODO: Busca usuário para autenticação, SEM usar .lean()
   // Isso é crucial para que a senha possa ser comparada pelo bcrypt.
-  async findByEmailForAuth(email) {
+  async findUserByEmailForAuth(email) {
     return await UserModel.findOne({ email });
   }
 
   // Cria um novo usuário no sistema
-  async create(userData) {
+  async createUser(userData) {
     const newUser = new UserModel(userData);
     return await newUser.save();
   }
 
   // Atualiza os dados de um usuário existente
-  async update(id, userData) {
+  async updateUser(id, userData) {
     return await UserModel.findByIdAndUpdate(
       id,
       userData,
@@ -33,12 +33,12 @@ export class UserDAO {
   }
 
   // Remove permanentemente um usuário do sistema
-  async delete(id) {
+  async deleteUser(id) {
     return await UserModel.findByIdAndDelete(id);
   }
 
   // Lista todos os usuários cadastrados (cuidado com performance em grandes volumes)
-  async findAll() {
+  async findAllUsers() {
     return await UserModel.find({}).lean();
   }
 }

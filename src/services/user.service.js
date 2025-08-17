@@ -19,7 +19,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserByEmail(email) {
-    return await userDAO.findByEmail(email);
+    return await userDAO.findUserByEmail(email);
   }
 
   /**
@@ -28,7 +28,7 @@ class UserService {
    * @returns {Promise<Document>} Documento Mongoose completo
    */
   async getUserByEmailForAuth(email) {
-    return await userDAO.findByEmailForAuth(email);
+    return await userDAO.findUserByEmailForAuth(email);
   }
 
   /**
@@ -37,7 +37,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário encontrado
    */
   async getUserById(id) {
-    return await userDAO.findById(id);
+    return await userDAO.findUserById(id);
   }
 
   /**
@@ -91,7 +91,7 @@ class UserService {
    * @returns {Promise<Array>} Lista de usuários
    */
   async getAllUsers() {
-    return await userDAO.findAll();
+    return await userDAO.findAllUsers();
   }
 
   /**

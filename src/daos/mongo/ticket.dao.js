@@ -5,19 +5,19 @@ import { TicketModel } from '../../models/ticket.model.js';
 export class TicketDAO {
 
   // Busca um ticket pelo ID
-  async findById(id) {
+  async findTicketById(id) {
     // Retorna o ticket como objeto JavaScript puro (sem métodos do Mongoose)
     return await TicketModel.findById(id).lean();
   }
 
   // Busca um ticket pelo código (campo único)
-  async findByCode(code) {
+  async findTicketByCode(code) {
     // Encontra o primeiro ticket com o código especificado
     return await TicketModel.findOne({ code }).lean();
   }
 
   // Cria um novo ticket
-  async create(ticketData) {
+  async createTicket(ticketData) {
     // Cria uma nova instância do modelo com os dados recebidos
     const newTicket = new TicketModel(ticketData);
     // Persiste o novo ticket no banco e retorna o resultado
@@ -25,7 +25,7 @@ export class TicketDAO {
   }
 
   // Atualiza um ticket existente
-  async update(id, ticketData) {
+  async updateTicket(id, ticketData) {
     // Atualiza o ticket e retorna a versão atualizada
     return await TicketModel.findByIdAndUpdate(
       id,           // ID do ticket a ser atualizado
@@ -35,7 +35,7 @@ export class TicketDAO {
   }
 
   // Exclui um ticket
-  async delete(id) {
+  async deleteTicket(id) {
     // Remove permanentemente o ticket do banco
     return await TicketModel.findByIdAndDelete(id);
   }

@@ -5,7 +5,7 @@ import ProductModel from '../../models/product.model.js';
 export class ProductDAO {
 
   // Busca produtos com paginação e filtros
-  async find(query, options) {
+  async findProducts(query, options) {
     // Utiliza o método paginate do plugin mongoose-paginate-v2
     // query: filtros de busca (ex: { category: 'eletrônicos' })
     // options: opções de paginação (ex: { page: 1, limit: 10, sort: { price: -1 } })
@@ -13,13 +13,13 @@ export class ProductDAO {
   }
 
   // Busca um único produto pelo ID
-  async findById(id) {
+  async findProductById(id) {
     // Retorna o produto como objeto JavaScript puro (sem métodos do Mongoose)
     return await ProductModel.findById(id).lean();
   }
 
   // Cria um novo produto no banco de dados
-  async create(productData) {
+  async createProduct(productData) {
     // Cria uma nova instância do modelo com os dados recebidos
     const newProduct = new ProductModel(productData);
     // Persiste o novo produto no banco e retorna o resultado
@@ -27,7 +27,7 @@ export class ProductDAO {
   }
 
   // Atualiza um produto existente
-  async update(id, productData) {
+  async updateProduct(id, productData) {
     // Busca e atualiza o produto em uma única operação atômica
     return await ProductModel.findByIdAndUpdate(
       id,         // ID do produto a ser atualizado
@@ -37,7 +37,7 @@ export class ProductDAO {
   }
 
   // Exclui um produto do banco de dados
-  async delete(id) {
+  async deleteProduct(id) {
     // Remove o documento correspondente ao ID
     return await ProductModel.findByIdAndDelete(id);
   }

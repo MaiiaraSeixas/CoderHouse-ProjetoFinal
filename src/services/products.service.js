@@ -24,7 +24,7 @@ export class ProductService {
 		if (sort) {
 			options.sort = { price: sort === 'asc' ? 1 : -1 };
 		}
-		return await this.productRepository.get(filter, options);
+		return await this.productRepository.getProducts(filter, options);
 	}
 
 	/**
@@ -34,7 +34,7 @@ export class ProductService {
 
 	// (Fragmento do método getProductById)
 	async getProductById(id) {
-		const product = await this.productRepository.getById(id);
+		const product = await this.productRepository.getProductById(id);
 		if (!product) {
 			// Lança um erro personalizado que o errorHandler converte para 404
 			CustomError.createError({
@@ -48,7 +48,7 @@ export class ProductService {
 	}
 
 	// async getProductById(id) {
-	// 	return await this.productRepository.getById(id);
+	// 	return await this.productRepository.getProductById(id);
 	// }
 
 	/**
@@ -59,7 +59,7 @@ export class ProductService {
 		if (!productData.title || !productData.price) {
 			throw new Error("Título e preço são campos obrigatórios.");
 		}
-		return await this.productRepository.create(productData);
+		return await this.productRepository.createProduct(productData);
 	}
 
 	/**
@@ -68,13 +68,13 @@ export class ProductService {
 	 * @param {Object} productData - Novos dados do produto
 	 */
 	// async updateProduct(id, productData) {
-	// 	return await this.productRepository.update(id, productData);
+	// 	return await this.productRepository.updateProduct(id, productData);
 	// }
 
 	async updateProduct(id, productData) {
 		// Primeiro, verifica se o produto existe
 		await this.getProductById(id);
-		return await this.productRepository.update(id, productData);
+		return await this.productRepository.updateProduct(id, productData);
 	}
 
 	/**
@@ -82,13 +82,13 @@ export class ProductService {
 	 * @param {string} id - ID do produto
 	 */
 	// 	async deleteProduct(id) {
-	// 		return await this.productRepository.delete(id);
+	// 		return await this.productRepository.deleteProduct(id);
 	// 	}
 	// }
 	async deleteProduct(id) {
 		// Primeiro, verifica se o produto existe
 		await this.getProductById(id);
-		return await this.productRepository.delete(id);
+		return await this.productRepository.deleteProduct(id);
 	}
 }
 

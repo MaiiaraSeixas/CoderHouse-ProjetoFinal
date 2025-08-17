@@ -65,21 +65,6 @@ class ProductsController {
 		}
 	}
 
-	/**
-	 * Manipula a requisição para adicionar um novo produto.
-	 * @param {Object} req - O objeto de requisição do Express.
-	 * @param {Object} res - O objeto de resposta do Express.
-	 * @param {Function} next - A função para chamar o próximo middleware.
-	 */
-	async addProduct(req, res, next) {
-		try {
-			// O corpo da requisição contém os dados do novo produto
-			const newProduct = await productService.addProduct(req.body);
-			res.status(201).json({ status: 'success', payload: newProduct });
-		} catch (error) {
-			next(error);
-		}
-	}
 
 	/**
 	 * Manipula a requisição para obter um produto pelo seu ID.

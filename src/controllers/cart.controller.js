@@ -54,7 +54,7 @@ class CartController {
 	}
 
 	// Busca um carrinho pelo ID
-	async getCart(req, res, next) {
+	async getCartById(req, res, next) {
 		try {
 			const { cid } = req.params;
 			const cart = await cartService.getCartById(cid);
@@ -107,11 +107,11 @@ class CartController {
 		}
 	}
 
-	async updateProductQuantity(req, res, next) {
+	async updateProductQuantityInCart(req, res, next) {
 		try {
 			const { cid, pid } = req.params;
 			const { quantity } = req.body;
-			await cartService.updateQuantity(cid, pid, quantity);
+			await cartService.updateProductQuantityInCart(cid, pid, quantity);
 			res.status(200).send({ status: 'success', message: 'Quantidade atualizada' });
 		} catch (error) {
 			next(error);
@@ -159,6 +159,3 @@ class CartController {
 }
 // Exporta uma instância única do controlador
 export const cartController = new CartController();
-
-
-

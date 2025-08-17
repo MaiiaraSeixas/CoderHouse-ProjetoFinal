@@ -12,8 +12,8 @@ export default class UserRepository {
    * @param {string} id - ID do usuário
    * @returns {UserDTO|null} - Usuário convertido para DTO ou null
    */
-  async getById(id) {
-    const user = await this.userDAO.findById(id);
+  async getUserById(id) {
+    const user = await this.userDAO.findUserById(id);
     // Retorna versão segura do usuário (sem senha, etc.)
     return user ? new UserDTO(user) : null;
   }
@@ -26,9 +26,9 @@ export default class UserRepository {
    * Nota: Usado para autenticação onde a senha é necessária
    * Não aplica DTO para manter campos necessários para login
    */
-  async getByEmail(email) {
+  async getUserByEmail(email) {
     // Retorna o objeto completo do banco (incluindo senha)
-    return await this.userDAO.findByEmail(email);
+    return await this.userDAO.findUserByEmail(email);
   }
 
   /**
@@ -36,8 +36,8 @@ export default class UserRepository {
    * @param {Object} data - Dados do novo usuário
    * @returns {UserDTO} - Novo usuário convertido para DTO (versão segura)
    */
-  async create(data) {
-    const newUser = await this.userDAO.create(data);
+  async createUser(data) {
+    const newUser = await this.userDAO.createUser(data);
     // Retorna versão segura após criação
     return new UserDTO(newUser);
   }
@@ -48,8 +48,8 @@ export default class UserRepository {
    * @param {Object} data - Novos dados do usuário
    * @returns {UserDTO|null} - Usuário atualizado em DTO ou null
    */
-  async update(id, data) {
-    const updatedUser = await this.userDAO.update(id, data);
+  async updateUser(id, data) {
+    const updatedUser = await this.userDAO.updateUser(id, data);
     return updatedUser ? new UserDTO(updatedUser) : null;
   }
 
@@ -58,16 +58,16 @@ export default class UserRepository {
    * @param {string} id - ID do usuário
    * @returns {Object} - Resultado da operação de exclusão
    */
-  async delete(id) {
-    return await this.userDAO.delete(id);
+  async deleteUser(id) {
+    return await this.userDAO.deleteUser(id);
   }
 
   /**
    * Lista todos os usuários (retorna versões seguras)
    * @returns {UserDTO[]} - Array de usuários convertidos para DTO
    */
-  async getAll() {
-    const users = await this.userDAO.findAll();
+  async getAllUsers() {
+    const users = await this.userDAO.findAllUsers();
     // Converte cada usuário para DTO seguro
     return users.map(user => new UserDTO(user));
   }
