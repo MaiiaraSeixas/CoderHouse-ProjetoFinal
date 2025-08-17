@@ -15,7 +15,10 @@
   {{#if user}}
   <div class="user-info">
     <p>👋 Bem-vindo, {{user.first_name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
-    <p><a href="/api/sessions/logout">Sair</a></p>
+    <p>
+    <a href="/cart">🛒 Meu Carrinho</a>
+    <a href="/api/sessions/logout">Sair</a>
+    </p>
   </div>
   {{/if}}
 
@@ -28,11 +31,11 @@
       <p>Categoria: {{this.category}}</p>
       <div class="product-actions">
         {{#if (gt this.stock 0)}}
-          <button onclick="adicionarAoCarrinho('{{this._id}}')">Adicionar ao Carrinho</button>
+          <button onclick="adicionarAoCarrinho('{{this.id}}')">Adicionar ao Carrinho</button>
         {{else}}
           <span style="color: red">Produto esgotado</span>
         {{/if}}
-        <a href="/products/{{this._id}}/view">Ver Detalhes</a>
+        <a href="/products/{{this.id}}/view">Ver Detalhes</a>
       </div>
     </li>
     {{else}}

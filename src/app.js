@@ -117,15 +117,15 @@ app.get('/cart', passport.authenticate('jwt', { session: false }), async (req, r
     try {
     const cartId = req.user.cartId;
     if (!cartId) {
-      return res.render('pages/cartDetails', { products: [], empty: true });
+      return res.render('pages/cartDetails', { products: [], empty: true, cartId: null });
     }
     const cart = await cartService.getCartById(cartId);
     if (!cart) {
       console.warn(`Carrinho com ID ${cartId} não foi encontrado.`);
-      return res.render('pages/cartDetails', { products: [], empty: true });
+      return res.render('pages/cartDetails', { products: [], empty: true, cartId: cartId });
     }
     const isEmpty = !cart.products || cart.products.length === 0;
-    res.render('pages/cartDetails', { products: cart.products, empty: isEmpty });
+    res.render('pages/cartDetails', { products: cart.products, empty: isEmpty, cartId: cartId });
   } catch (error) {
     console.error("Erro ao carregar a página do carrinho:", error);
     res.status(500).send("Erro ao carregar o carrinho.");

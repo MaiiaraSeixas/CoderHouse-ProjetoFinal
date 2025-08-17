@@ -1,65 +1,229 @@
-<!-- ====== cartDetails.handlebars (Corrigido) ====== -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
+  <!-- Define a codificação de caracteres da página -->
   <meta charset="UTF-8">
+  <!-- Título que aparece na aba do navegador -->
   <title>Meu Carrinho</title>
-  <!-- Estilos da página do carrinho -->
+
+  <!-- Estilos CSS da página -->
   <style>
+    /* Estilo geral do corpo da página */
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
+      max-width: 800px;
+      margin: auto;
     }
 
+    /* Estilo do card de cada produto */
     .card {
       border: 1px solid #ccc;
       padding: 15px;
       margin-bottom: 10px;
       border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
+    /* Estilo da área com informações do produto */
+    .card-info {
+      flex-grow: 1;
+    }
+
+    /* Estilo da área com botões de ação do produto */
+    .card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Remove margem superior do título do produto */
     .card h3 {
       margin-top: 0;
     }
 
+    /* Estilo do total do carrinho */
     .total {
       font-weight: bold;
       margin-top: 20px;
       font-size: 18px;
     }
+
+    /* Estilo do resumo do carrinho */
+    .cart-summary {
+      margin-top: 20px;
+      border-top: 2px solid #333;
+      padding-top: 10px;
+    }
+
+    /* Estilo geral dos botões */
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-update {
+      background-color: #ffc107;
+    }
+
+    /* Botão de atualizar quantidade */
+    .btn-remove {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    /* Botão de remover produto */
+    .btn-clear {
+      background-color: #6c757d;
+      color: white;
+    }
+
+    /* Botão de limpar carrinho */
+    .btn-purchase {
+      background-color: #28a745;
+      color: white;
+      font-size: 16px;
+      padding: 12px 20px;
+    }
+
+    /* Botão de finalizar compra */
+
+    /* Estilo do input de quantidade */
+    input[type="number"] {
+      width: 60px;
+      text-align: center;
+    }
   </style>
 </head>
 
 <body>
+  <!-- Título principal da página -->
   <h1>🛒 Meu Carrinho</h1>
 
-  <!-- Verificação de carrinho vazio -->
+  <!-- Verifica se o carrinho está vazio -->
   {{#if empty}}
   <p>Seu carrinho está vazio.</p>
   {{else}}
-  <!-- Listagem de produtos do carrinho -->
-  {{#each products}}
-  <div class="card">
-    <!-- Informações do produto -->
-    <h3>{{this.product.title}}</h3>
-    <p>{{this.product.description}}</p>
-    <p>Categoria: {{this.product.category}}</p>
-    <p>Preço unitário: R$ {{this.product.price}}</p>
+  <!-- Lista de produtos no carrinho -->
+  <div id="cart-items">
+    {{#each products}}
+    <div class="card">
+      <!-- Informações do produto -->
+      <div class="card-info">
+        <h3>{{this.product.title}}</h3>
+        <p>Preço unitário: R$ {{this.product.price}}</p>
+        <p>Subtotal: R$ {{multiply this.quantity this.product.price}}</p>
+      </div>
 
-    <!-- Detalhes da quantidade e subtotal -->
-    <p>Quantidade: {{this.quantity}}</p>
-    <p>Subtotal: R$ {{multiply this.quantity this.product.price}}</p>
+      <!-- Botões de ação para cada produto -->
+      <div class="card-actions">
+        <div>
+          <!-- Input para alterar a quantidade do produto -->
+          <input type="number" value="{{this.quantity}}" min="1" id="quantity-{{this.product._id}}">
+          <button class="btn btn-update"
+            onclick="updateQuantity('{{../cartId}}', '{{this.product._id}}')">Atualizar</button>
+        </div>
+        <!-- Botão para remover o produto do carrinho -->
+        <button class="btn btn-remove" onclick="removeProduct('{{../cartId}}', '{{this.product._id}}')">Remover</button>
+      </div>
+    </div>
+    {{/each}}
   </div>
-  {{/each}}
 
-  <!-- Cálculo do total geral usando helper -->
-  <p class="total">Total: R$ {{calculateTotal products}}</p>
+  <!-- Resumo do carrinho com total e ações -->
+  <div class="cart-summary">
+    <p class="total">Total: R$ {{calculateTotal products}}</p>
+    <button class="btn btn-purchase" onclick="purchaseCart('{{cartId}}')">Finalizar Compra</button>
+    <button class="btn btn-clear" onclick="clearCart('{{cartId}}')">Limpar Carrinho</button>
+  </div>
   {{/if}}
 
-  <!-- Link de navegação de retorno -->
+  <!-- Link para voltar para a página de produtos -->
   <br>
   <a href="/products">⬅ Voltar para Produtos</a>
+
+  <script>
+    // Função para remover um produto do carrinho
+    async function removeProduct(cartId, productId) {
+      if (!confirm('Tem a certeza de que quer remover este produto?')) return; // Confirmação do usuário
+      try {
+        // Requisição DELETE para a API para remover o produto
+        const response = await fetch(`/api/carts/${cartId}/product/${productId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Falha ao remover produto.');
+        alert('Produto removido com sucesso!');
+        window.location.reload(); // Atualiza a página
+      } catch (err) {
+        alert(`Erro: ${err.message}`);
+      }
+    }
+
+    // Função para atualizar a quantidade de um produto
+    async function updateQuantity(cartId, productId) {
+      const quantityInput = document.getElementById(`quantity-${productId}`);
+      const quantity = parseInt(quantityInput.value);
+
+      if (isNaN(quantity) || quantity < 1) {
+        alert('Por favor, insira uma quantidade válida.');
+        return;
+      }
+
+      try {
+        // Requisição PUT para a API para atualizar a quantidade
+        const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity })
+        });
+        if (!response.ok) throw new Error('Falha ao atualizar a quantidade.');
+        alert('Quantidade atualizada!');
+        window.location.reload();
+      } catch (err) {
+        alert(`Erro: ${err.message}`);
+      }
+    }
+
+    // Função para limpar todo o carrinho
+    async function clearCart(cartId) {
+      if (!confirm('Tem a certeza de que quer esvaziar o carrinho?')) return;
+      try {
+        // Requisição DELETE para a API para limpar o carrinho
+        const response = await fetch(`/api/carts/${cartId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Falha ao limpar o carrinho.');
+        alert('Carrinho esvaziado com sucesso!');
+        window.location.reload();
+      } catch (err) {
+        alert(`Erro: ${err.message}`);
+      }
+    }
+
+    // Função para finalizar a compra
+    async function purchaseCart(cartId) {
+      try {
+        // Requisição POST para a API para processar a compra
+        const response = await fetch(`/api/carts/${cartId}/purchase`, { method: 'POST' });
+        const result = await response.json();
+
+        if (!response.ok) {
+          let errorMessage = result.message || 'Não foi possível processar a compra.';
+          if (result.productsNotPurchased && result.productsNotPurchased.length > 0) {
+            errorMessage += `\nIDs dos produtos sem estoque: ${result.productsNotPurchased.join(', ')}`;
+          }
+          throw new Error(errorMessage);
+        }
+
+        alert(`Compra finalizada com sucesso!\nTicket: ${result.payload.code}\nValor: R$ ${result.payload.amount}`);
+        window.location.reload();
+      } catch (err) {
+        alert(`Erro na compra: ${err.message}`);
+      }
+    }
+  </script>
 </body>
 
 </html>

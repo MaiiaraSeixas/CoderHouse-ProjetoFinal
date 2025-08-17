@@ -71,7 +71,7 @@
           // Coleta dos dados do formulário
           const quantity = parseInt(e.target.quantity.value); // Converte para número
           const cartId = '{{cartId}}'; // ID do carrinho injetado pelo template
-          const productId = '{{product._id}}'; // ID do produto injetado pelo template
+          const productId = '{{product.id}}'; // ID do produto injetado pelo template
 
           try {
             // Requisição para API de carrinhos
@@ -108,6 +108,7 @@
       <!-- Botão de retorno à lista de produtos -->
       <br><br>
       <a href="/products" class="btn">⬅ Voltar para Produtos</a>
+      <a href="/cart" class="btn">🛒 Ver Carrinho</a>
     </div>
   </div>
 </body>

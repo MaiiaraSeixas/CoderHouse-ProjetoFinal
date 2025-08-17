@@ -1,18 +1,28 @@
+# Dependências
 node_modules/
-*.json !package*.json
-*.log
-.env
-.DS_Store
-src/data/*.json
-assss*
-asss*
-*.config.js
+
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Variáveis de ambiente
 .env
 
 # Arquivos de sistema operacional
 .DS_Store
 Thumbs.db
+
+# Arquivos específicos do projeto
+*.json
+!package*.json
+src/data/*.json
+assss*
+asss*
+*.config.js
+
+# Novos itens solicitados
+jest.config.js
+src/data/
+/uploads/
