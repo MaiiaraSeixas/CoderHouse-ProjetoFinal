@@ -32,7 +32,7 @@ export class CartDAO {
   }
 
   // Adiciona um produto ao carrinho ou atualiza sua quantidade
-  async addProduct(cartId, productId, quantity) {
+  async addProductToCart(cartId, productId, quantity) {
     const cart = await CartModel.findById(cartId);  // Busca o carrinho
 
     // Verifica se o produto já existe no carrinho
@@ -52,7 +52,7 @@ export class CartDAO {
   }
 
   // Remove um produto específico do carrinho
-  async removeProduct(cartId, productId) {
+  async removeProductFromCart(cartId, productId) {
     return await CartModel.findByIdAndUpdate(
       cartId,
       {
@@ -65,7 +65,7 @@ export class CartDAO {
   }
 
   // Remove todos os produtos do carrinho (esvazia o carrinho)
-  async clearCart(cartId) {
+  async clearProductsFromCart(cartId) {
     return await CartModel.findByIdAndUpdate(
       cartId,
       { products: [] },  // Substitui array de produtos por array vazio

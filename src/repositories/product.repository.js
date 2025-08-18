@@ -10,9 +10,9 @@ export default class ProductRepository {
   }
 
   // Obtém produtos paginados com filtros e opções
-  async get(query, options) {
+  async getProducts(query, options) {
     // Usa o DAO para buscar produtos com paginação
-    const result = await this.productDAO.find(query, options);
+    const result = await this.productDAO.findProducts(query, options);
     
     // Converte cada documento de produto para DTO
     result.docs = result.docs.map(product => new ProductDTO(product));
@@ -21,32 +21,32 @@ export default class ProductRepository {
   }
 
   // Obtém um único produto pelo ID
-  async getById(id) {
+  async getProductById(id) {
     // Busca o produto usando o DAO
-    const product = await this.productDAO.findById(id);
+    const product = await this.productDAO.findProductById(id);
     // Se encontrado, retorna como DTO; caso contrário null
     return product ? new ProductDTO(product) : null;
   }
 
   // Cria um novo produto
-  async create(data) {
+  async createProduct(data) {
     // Usa o DAO para persistir o novo produto
-    const newProduct = await this.productDAO.create(data);
+    const newProduct = await this.productDAO.createProduct(data);
     // Retorna o produto criado convertido para DTO
     return new ProductDTO(newProduct);
   }
 
   // Atualiza um produto existente
-  async update(id, data) {
+  async updateProduct(id, data) {
     // Chama o método de atualização do DAO
-    const updatedProduct = await this.productDAO.update(id, data);
+    const updatedProduct = await this.productDAO.updateProduct(id, data);
     // Se encontrado, retorna como DTO; caso contrário null
     return updatedProduct ? new ProductDTO(updatedProduct) : null;
   }
 
   // Exclui um produto permanentemente
-  async delete(id) {
+  async deleteProduct(id) {
     // Delega a operação de exclusão ao DAO
-    return await this.productDAO.delete(id);
+    return await this.productDAO.deleteProduct(id);
   }
 }

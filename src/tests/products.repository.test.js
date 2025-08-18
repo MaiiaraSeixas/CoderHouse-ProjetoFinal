@@ -34,7 +34,7 @@ describe('Teste de Unidade do Repositório de Produtos', () => {
 		this.timeout(5000); // Timeout específico para este teste
 
 		// Chama o método de paginação com parâmetros básicos
-		const result = await productRepository.get(
+		const result = await productRepository.getProducts(
 			{}, // Filtro vazio (todos os produtos)
 			{
 				page: 1,
@@ -70,7 +70,7 @@ describe('Teste de Unidade do Repositório de Produtos', () => {
 		};
 
 		// Cria o produto usando o repositório
-		const newProduct = await productRepository.create(productMock);
+		const newProduct = await productRepository.createProduct(productMock);
 
 		// Verificações:
 		expect(newProduct).to.be.an('object'); // 1. Retorna um objeto
@@ -99,8 +99,8 @@ describe('Teste de Unidade do Repositório de Produtos', () => {
 		};
 
 		// Cria o produto e depois busca pelo mesmo ID
-		const createdProduct = await productRepository.create(productMock);
-		const foundProduct = await productRepository.getById(createdProduct.id);
+		const createdProduct = await productRepository.createProduct(productMock);
+		const foundProduct = await productRepository.getProductById(createdProduct.id);
 
 		// Verificações:
 		expect(foundProduct).to.be.an('object'); // 1. Retorna um objeto

@@ -156,7 +156,7 @@ class CartService {
    * @param {number} quantity - Nova quantidade
    * @returns {Promise<Object>} Resultado da operação
    */
-  async updateQuantity(cartId, productId, quantity) {
+  async updateProductQuantityInCart(cartId, productId, quantity) {
     return await CartModel.updateOne(
       {
         _id: cartId,

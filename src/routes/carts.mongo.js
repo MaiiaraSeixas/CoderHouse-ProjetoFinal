@@ -2,7 +2,6 @@
 
 import { Router } from 'express';
 import passport from 'passport';
-import CartModel from '../models/cart.model.js';
 import handlePolicies from '../middlewares/handlePolicies.js';
 // 1. Importa o objeto 'cartController'
 import { cartController } from '../controllers/cart.controller.js';
@@ -15,23 +14,11 @@ const router = Router();
 router.get(
   '/my-cart',
   passport.authenticate('jwt', { session: false }),
-  async (req, res) => {
-    try {
-      const cartId = req.user.cartId;
-      const cart = await CartModel.findById(cartId)
-        .populate('products.product')
-        .lean();
-
-      if (!cart) {
-        return res.sendError('Carrinho não encontrado', 404);
-      }
-
-      res.sendSuccess('Carrinho carregado com sucesso', cart);
-    } catch (err) {
-      console.error('Erro ao buscar carrinho:', err);
-      res.sendError('Erro interno ao buscar carrinho');
-    }
-  }
+  (req, res, next) => {
+    req.params.cid = req.user.cartId;
+    next();
+  },
+  cartController.getCartById
 );
 
 /**************************************/
@@ -42,7 +29,7 @@ router.get(
 router.get(
   '/:cid',
   handlePolicies(['USER', 'PREMIUM']),
-  cartController.getCart // Ajustado para o método correto no controller
+  cartController.getCartById // Ajustado para o método correto no controller
 );
 
 router.post(

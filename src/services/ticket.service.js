@@ -31,7 +31,7 @@ class TicketService {
 		};
 
 		// Delega criação ao repositório
-		return await this.ticketRepository.create(ticketData);
+		return await this.ticketRepository.createTicket(ticketData);
 	}
 
 	/**
@@ -40,7 +40,7 @@ class TicketService {
 	 * @returns {Promise<Object|null>} Ticket encontrado ou null
 	 */
 	async getTicketById(id) {
-		return await this.ticketRepository.getById(id);
+		return await this.ticketRepository.getTicketById(id);
 	}
 
 	/**
@@ -49,7 +49,7 @@ class TicketService {
 	 * @returns {Promise<Object|null>} Ticket encontrado ou null
 	 */
 	async getTicketByCode(code) {
-		return await this.ticketRepository.getByCode(code);
+		return await this.ticketRepository.getTicketByCode(code);
 	}
 }
 

@@ -62,7 +62,7 @@ describe('Teste de Unidade para ProductService', () => {
     };
 
     // Configura o stub para retornar uma resposta simulada
-    productRepositoryStub.get.resolves({
+    productRepositoryStub.getProducts.resolves({
       docs: [],
       totalPages: 1
     });
@@ -71,7 +71,7 @@ describe('Teste de Unidade para ProductService', () => {
     await productService.getProducts(params);
 
     // Verifica se o repositório foi chamado com os parâmetros corretos
-    expect(productRepositoryStub.get.calledOnceWith(expectedFilter, expectedOptions)).to.be.true;
+    expect(productRepositoryStub.getProducts.calledOnceWith(expectedFilter, expectedOptions)).to.be.true;
   });
 
   /**
@@ -95,7 +95,7 @@ describe('Teste de Unidade para ProductService', () => {
     } catch (error) {
       // Verificações:
       expect(error.message).to.equal('Título e preço são campos obrigatórios.');
-      expect(productRepositoryStub.create.called).to.be.false;
+      expect(productRepositoryStub.createProduct.called).to.be.false;
     }
   });
 
@@ -116,13 +116,13 @@ describe('Teste de Unidade para ProductService', () => {
     };
 
     // Configura o stub para retornar o produto criado
-    productRepositoryStub.create.resolves(validProduct);
+    productRepositoryStub.createProduct.resolves(validProduct);
 
     // Chama o método de criação
     const result = await productService.addProduct(validProduct);
 
     // Verificações:
-    expect(productRepositoryStub.create.calledOnceWith(validProduct)).to.be.true;
+    expect(productRepositoryStub.createProduct.calledOnceWith(validProduct)).to.be.true;
     expect(result).to.deep.equal(validProduct);
   });
 });
