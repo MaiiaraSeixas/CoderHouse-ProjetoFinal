@@ -169,6 +169,22 @@ class CartService {
       }
     );
   }
+  /**
+   * Deleta um carrinho
+   * @param {string} cartId - ID do carrinho
+   * @returns {Promise<Object>} Resultado da operação
+   */
+  async deleteCart(cartId) {
+    return await CartModel.findByIdAndDelete(cartId);
+  }
+
+  /**
+   * Retorna todos os carrinhos
+   * @returns {Promise<Array>} Lista de carrinhos
+   */
+  async getAllCarts() {
+    return await CartModel.find().lean();
+  }
 }
 
 // Exporta instância singleton do serviço

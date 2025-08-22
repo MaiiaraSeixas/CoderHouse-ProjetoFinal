@@ -72,4 +72,9 @@ export class CartDAO {
       { new: true }  // Retorna o carrinho atualizado
     );
   }
+
+  // Lista todos os carrinhos
+  async findAllCarts() {
+    return await CartModel.find().lean();
+  }
 }

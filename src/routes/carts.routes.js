@@ -59,7 +59,7 @@ router.delete('/:cid/product/:pid',
 router.delete('/:cid',
 	passport.authenticate('jwt', { session: false }),
 	handlePolicies(['USER', 'PREMIUM']),
-	cartController.clearCart // Corrigido para usar clearCart, que é mais seguro
+	cartController.clearProductsFromCart // Corrigido para usar clearCart, que é mais seguro
 );
 
 export default router;

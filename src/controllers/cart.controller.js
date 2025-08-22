@@ -97,7 +97,7 @@ class CartController {
 		}
 	}
 
-	async clearCart(req, res, next) {
+	async clearProductsFromCart(req, res, next) {
 		try {
 			const { cid } = req.params;
 			await cartService.clearProductsFromCart(cid);
