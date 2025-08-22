@@ -79,7 +79,7 @@ export const uploadDocuments = async (req, res) => {
 export const changeUserRole = async (req, res) => {
   try {
     const { uid } = req.params;
-    const user = await userService.changeRole(uid);
+    const user = await userService.changeUserRole(uid);
     res.sendSuccess({ message: 'Role do usuário atualizada com sucesso!', payload: { user } });
   } catch (error) {
     req.logger.error(error.message);

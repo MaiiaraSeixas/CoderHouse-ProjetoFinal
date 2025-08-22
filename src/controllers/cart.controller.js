@@ -100,7 +100,7 @@ class CartController {
 	async clearCart(req, res, next) {
 		try {
 			const { cid } = req.params;
-			await cartService.clearCart(cid);
+			await cartService.clearProductsFromCart(cid);
 			res.status(200).send({ status: 'success', message: 'Carrinho esvaziado com sucesso' });
 		} catch (error) {
 			next(error);

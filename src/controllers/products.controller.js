@@ -34,7 +34,7 @@ class ProductsController {
 				});
 			}
 
-			const newProduct = await productService.addProduct(req.body);
+			const newProduct = await productService.createProduct(req.body);
 			res.status(201).json({ status: 'success', payload: newProduct });
 		} catch (error) {
 			// 3. Passa o erro (seja o nosso customizado ou outro) para o errorHandler

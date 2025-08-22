@@ -88,7 +88,7 @@ describe('Teste de Unidade para ProductService', () => {
 
     try {
       // Tenta adicionar o produto inválido
-      await productService.addProduct(invalidProduct);
+      await productService.createProduct(invalidProduct);
 
       // Se passar, força falha no teste
       expect.fail('O serviço deveria ter lançado um erro');
@@ -119,7 +119,7 @@ describe('Teste de Unidade para ProductService', () => {
     productRepositoryStub.createProduct.resolves(validProduct);
 
     // Chama o método de criação
-    const result = await productService.addProduct(validProduct);
+    const result = await productService.createProduct(validProduct);
 
     // Verificações:
     expect(productRepositoryStub.createProduct.calledOnceWith(validProduct)).to.be.true;

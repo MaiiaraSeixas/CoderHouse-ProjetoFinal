@@ -133,7 +133,7 @@ class UserService {
    * @returns {Promise<Object>} Usuário atualizado
    * @throws {Error} Se documentos obrigatórios faltarem
    */
-  async changeRole(uid) {
+  async changeUserRole(uid) {
     // Busca usuário completo
     const user = await UserModel.findById(uid);
     if (!user) throw new Error('Usuário não encontrado');

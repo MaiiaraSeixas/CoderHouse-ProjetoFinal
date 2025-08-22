@@ -55,7 +55,7 @@ export class ProductService {
 	 * Adiciona um novo produto ao sistema
 	 * @param {Object} productData - Dados do novo produto
 	 */
-	async addProduct(productData) {
+	async createProduct(productData) {
 		if (!productData.title || !productData.price) {
 			throw new Error("Título e preço são campos obrigatórios.");
 		}

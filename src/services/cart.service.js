@@ -142,7 +142,7 @@ class CartService {
    * @param {string} cartId - ID do carrinho
    * @returns {Promise<Object>} Resultado da operação
    */
-  async clearCart(cartId) {
+  async clearProductsFromCart(cartId) {
     return await CartModel.updateOne(
       { _id: cartId },
       { $set: { products: [] } }
