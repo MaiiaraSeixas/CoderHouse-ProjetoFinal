@@ -5,7 +5,7 @@ import { isValidPassword } from '../utils/cryptography.js';
 
 /**
  * Serviço de Autenticação
- * 
+ *
  * Responsável por gerenciar:
  * - Registro de novos usuários
  * - Autenticação de usuários existentes (login)
@@ -23,7 +23,7 @@ class AuthService {
    * @returns {Promise<Object>} Usuário criado
    * @throws {Error} Se o email já estiver cadastrado
    */
-  async register(userData) {
+  async registerUser(userData) {
     const { email } = userData;
 
     // Verifica se já existe usuário com o mesmo email
@@ -44,7 +44,7 @@ class AuthService {
    * @returns {Promise<Object>} Objeto do usuário autenticado (sem métodos Mongoose)
    * @throws {Error} Se usuário não existir ou senha for inválida
    */
-  async login(email, password) {
+  async loginUser(email, password) {
     // Busca usuário como documento Mongoose completo (para operações de atualização)
     const user = await this.userService.getUserByEmailForAuth(email);
 

@@ -3,7 +3,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon'; // Biblioteca para criar mocks e stubs
 import UserModel from '../models/user.model.js'; // O modelo que vamos "simular"
-import { UserDAO } from '../daos/mongo/user.dao.js'; // A unidade que queremos testar (importando a classe)userDAO from '../daos/mongo/user.dao.js'; // A unidade que queremos testar (importando a instância)
+import { UserDAO } from '../daos/mongo/user.dao.js';
 
 describe('Teste de Unidade para UserDAO', () => {
   let userDAO; // Instância da classe UserDAO
@@ -72,6 +72,26 @@ describe('Teste de Unidade para UserDAO', () => {
     expect(findOneStub.calledOnceWith({ email: userMock.email })).to.be.true;
   });
 
+  // --- Teste para o método findUserByEmailForAuth ---
+  it('Deve retornar um utilizador pelo seu email para autenticação', async () => {
+    const userMock = {
+      _id: '60d5ecb3b3a3a40015f3b3a5',
+      first_name: 'Jane',
+      last_name: 'Doe',
+      email: 'jane.doe@example.com',
+      password: 'hashedpassword',
+      role: 'user'
+    };
+
+    // Criamos um stub para o método 'findOne' do UserModel, sem o .lean()
+    const findOneStub = sinon.stub(UserModel, 'findOne').resolves(userMock);
+
+    const result = await userDAO.findUserByEmailForAuth(userMock.email);
+
+    expect(result).to.deep.equal(userMock);
+    expect(findOneStub.calledOnceWith({ email: userMock.email })).to.be.true;
+  });
+
   // --- Teste para o método createUser ---
   it('Deve criar um novo utilizador', async () => {
     const newUserDa_ta = {
@@ -91,5 +111,51 @@ describe('Teste de Unidade para UserDAO', () => {
 
     // Verificamos se o resultado retornado é o esperado.
     expect(result).to.deep.equal(createdUserMock);
+  });
+
+  // --- Teste para o método updateUser ---
+  it('Deve atualizar um utilizador existente', async () => {
+    const userId = '60d5ecb3b3a3a40015f3b3a5';
+    const userData = { first_name: 'John Updated' };
+    const updatedUserMock = { _id: userId, first_name: 'John Updated' };
+
+    const findByIdAndUpdateStub = sinon.stub(UserModel, 'findByIdAndUpdate').returns({
+      lean: sinon.stub().resolves(updatedUserMock)
+    });
+
+    const result = await userDAO.updateUser(userId, userData);
+
+    expect(result).to.deep.equal(updatedUserMock);
+    expect(findByIdAndUpdateStub.calledOnceWith(userId, userData, { new: true })).to.be.true;
+  });
+
+  // --- Teste para o método deleteUser ---
+  it('Deve deletar um utilizador', async () => {
+    const userId = '60d5ecb3b3a3a40015f3b3a5';
+    const deleteResultMock = { acknowledged: true, deletedCount: 1 };
+
+    const findByIdAndDeleteStub = sinon.stub(UserModel, 'findByIdAndDelete').resolves(deleteResultMock);
+
+    const result = await userDAO.deleteUser(userId);
+
+    expect(result).to.deep.equal(deleteResultMock);
+    expect(findByIdAndDeleteStub.calledOnceWith(userId)).to.be.true;
+  });
+
+  // --- Teste para o método findAllUsers ---
+  it('Deve retornar todos os utilizadores', async () => {
+    const usersMock = [
+      { _id: '1', name: 'User 1' },
+      { _id: '2', name: 'User 2' },
+    ];
+
+    const findStub = sinon.stub(UserModel, 'find').returns({
+      lean: sinon.stub().resolves(usersMock)
+    });
+
+    const result = await userDAO.findAllUsers();
+
+    expect(result).to.deep.equal(usersMock);
+    expect(findStub.calledOnceWith({})).to.be.true;
   });
 });

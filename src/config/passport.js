@@ -24,7 +24,7 @@ export function initializePassport() {
     async (req, email, password, done) => {
       try {
         // Tenta registrar o usuário com dados da requisição
-        const user = await authService.register({ ...req.body, password });
+        const user = await authService.registerUser({ ...req.body, password });
 
         // Registro bem-sucedido: passa usuário para próximo middleware
         return done(null, user);
@@ -43,7 +43,7 @@ export function initializePassport() {
     async (email, password, done) => {
       try {
         // Valida credenciais com serviço de autenticação
-        const user = await authService.login(email, password);
+        const user = await authService.loginUser(email, password);
 
         // Login válido: passa objeto do usuário
         return done(null, user);
