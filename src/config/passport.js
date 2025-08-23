@@ -57,40 +57,43 @@ export function initializePassport() {
   // =====================================================================
   // ESTRATÉGIA DE AUTENTICAÇÃO COM GITHUB (OAuth)
   // =====================================================================
-  passport.use('github', new GitHubStrategy(
-    {
-      clientID: config.GITHUB_CLIENT_ID,         // Credenciais da app GitHub
-      clientSecret: config.GITHUB_CLIENT_SECRET,
-      callbackURL: config.GITHUB_CALLBACK_URL    // URL de retorno
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        // Tenta obter email do perfil GitHub ou cria um placeholder
-        const email = profile._json.email || `${profile.username}@github.com`;
+  // Apenas inicializa a estratégia do GitHub se as credenciais estiverem definidas
+  if (config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET) {
+    passport.use('github', new GitHubStrategy(
+      {
+        clientID: config.GITHUB_CLIENT_ID,         // Credenciais da app GitHub
+        clientSecret: config.GITHUB_CLIENT_SECRET,
+        callbackURL: config.GITHUB_CALLBACK_URL    // URL de retorno
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          // Tenta obter email do perfil GitHub ou cria um placeholder
+          const email = profile._json.email || `${profile.username}@github.com`;
 
-        // Verifica se usuário já existe
-        let user = await userService.getUserByEmail(email);
+          // Verifica se usuário já existe
+          let user = await userService.getUserByEmail(email);
 
-        // Cria novo usuário se não existir
-        if (!user) {
-          user = await userService.createUser({
-            first_name: profile.displayName || profile.username,
-            last_name: '',
-            email: email,
-            password: '',               // Sem senha (autenticação social)
-            githubId: profile.id,       // Salva ID do GitHub
-            role: 'user'                // Papel padrão
-          });
+          // Cria novo usuário se não existir
+          if (!user) {
+            user = await userService.createUser({
+              first_name: profile.displayName || profile.username,
+              last_name: '',
+              email: email,
+              password: '',               // Sem senha (autenticação social)
+              githubId: profile.id,       // Salva ID do GitHub
+              role: 'user'                // Papel padrão
+            });
+          }
+
+          // Autenticação bem-sucedida
+          return done(null, user);
+        } catch (err) {
+          // Tratamento de erros no fluxo OAuth
+          return done(err);
         }
-
-        // Autenticação bem-sucedida
-        return done(null, user);
-      } catch (err) {
-        // Tratamento de erros no fluxo OAuth
-        return done(err);
       }
-    }
-  ));
+    ));
+  }
 
   // =====================================================================
   // ESTRATÉGIA JWT (PARA ROTAS PROTEGIDAS)

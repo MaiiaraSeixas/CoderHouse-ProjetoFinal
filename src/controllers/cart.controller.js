@@ -4,11 +4,12 @@
 import cartService from "../services/cart.service.js"; // Importa o serviço de carrinho
 
 class CartController {
-	// Controlador para finalizar a compra de um carrinho
+	// Controlador para iniciar a compra de um carrinho, gerando um PaymentIntent
 	async purchaseCart(req, res, next) {
 		try {
+
 			const { cid } = req.params; // Obtém o ID do carrinho da URL
-			const { user } = req;       // Obtém o usuário autenticado da requisição
+			const { user } = req; // Obtém o usuário autenticado do objeto req
 
 			// Validação básica: verifica se há um usuário e se tem e-mail
 			if (!user || !user.email) {
@@ -18,28 +19,31 @@ class CartController {
 				});
 			}
 
-			// Chama o serviço que processa a compra
-			const result = await cartService.purchaseCart(cid, user);
-
-			// Se um ticket foi gerado, a compra foi bem-sucedida
-			if (result.ticket) {
-				return res.status(200).send({
-					status: 'success',
-					message: 'Compra finalizada com sucesso!',
-					payload: result.ticket, // Dados do ticket gerado
-					productsNotPurchased: result.productsNotPurchased // Lista de produtos não comprados
-				});
-			} else {
-				// Nenhum produto pôde ser comprado
-				return res.status(400).send({
-					status: 'error',
-					message: 'Não foi possível processar a compra. Estoque insuficiente para todos os produtos.',
-					productsNotPurchased: result.productsNotPurchased
-				});
+			// 🔧 Correção: garante que o serviço lance erro quando carrinho não existe
+			const cart = await cartService.getCartById(cid);
+			if (!cart) {
+				return res.status(404).send({ status: 'error', message: 'Carrinho não encontrado' });
 			}
+
+			// O serviço agora retorna os dados do PaymentIntent, incluindo client_secret
+			const paymentIntent = await cartService.purchaseCart(cid, user);
+
+			// 🔧 Retorno compatível com o teste de integração
+			res.sendSuccess({
+				message: 'Intenção de pagamento criada com sucesso.',
+				payload: { client_secret: paymentIntent.client_secret }
+			});
+
 		} catch (error) {
 			console.error("Purchase cart controller error:", error);
-			next(error); // Encaminha o erro para o middleware de tratamento de erros
+
+			// Personaliza a mensagem de erro para o cliente
+			if (error.message.includes('Não há produtos com estoque')) {
+				return res.status(400).send({ status: 'error', message: error.message });
+			}
+
+			// Erros inesperados são repassados para o middleware de tratamento de erros
+			next(error);
 		}
 	}
 
@@ -72,7 +76,6 @@ class CartController {
 		try {
 			const { cid, pid } = req.params;
 			// ✅ CORREÇÃO: Certifique-se de que a quantidade seja um número.
-			// O valor padrão de 1 é bom, mas vamos garantir que seja numérico.
 			const quantity = req.body.quantity ? Number(req.body.quantity) : 1;
 
 			if (isNaN(quantity) || quantity < 1) {
@@ -85,7 +88,6 @@ class CartController {
 			next(error);
 		}
 	}
-	// ... Implementação dos outros métodos para referência ...
 
 	async removeProductFromCart(req, res, next) {
 		try {
@@ -111,6 +113,12 @@ class CartController {
 		try {
 			const { cid, pid } = req.params;
 			const { quantity } = req.body;
+
+			// 🔧 Validação: impede valores inválidos
+			if (isNaN(quantity) || quantity < 1) {
+				return res.status(400).send({ status: 'error', message: 'Quantidade inválida.' });
+			}
+
 			await cartService.updateProductQuantityInCart(cid, pid, quantity);
 			res.status(200).send({ status: 'success', message: 'Quantidade atualizada' });
 		} catch (error) {
@@ -136,9 +144,7 @@ class CartController {
 			next(error);
 		}
 	}
-	// Outros métodos do controlador podem ser adicionados aqui
 
-	// Exemplo de método adicional para obter todos os produtos de um carrinho
 	async getProductsInCart(req, res, next) {
 		try {
 			const { cid } = req.params; // Obtém o ID do carrinho da URL
@@ -153,9 +159,8 @@ class CartController {
 		} catch (error) {
 			next(error); // Encaminha o erro para o middleware de tratamento de erros
 		}
-
-
 	}
 }
+
 // Exporta uma instância única do controlador
 export const cartController = new CartController();

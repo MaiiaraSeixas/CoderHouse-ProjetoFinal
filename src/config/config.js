@@ -33,4 +33,6 @@ export default {
     TWILIO_PHONE: process.env.TWILIO_PHONE,
     
     NODE_ENV: process.env.NODE_ENV || 'development',
+
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
 };

@@ -4,21 +4,22 @@ import CartModel from "../models/cart.model.js";
 import productService from "./products.service.js";
 import ticketService from "./ticket.service.js";
 import MailService from './mail.service.js';
+import { paymentService } from './payment.service.js';
 
 /**
  * Serviço de Gerenciamento de Carrinhos
- * 
- * Responsável por todas as operações relacionadas a carrinhos de compras:
- * - Criação e manipulação de carrinhos
- * - Adição/remoção de produtos
- * - Finalização de compras (checkout)
- * - Integração com outros serviços (produtos, tickets, email)
+ * Responsável por toda a lógica de manipulação de carrinhos,
+ * checkout e integração com pagamento e e-mail.
  */
 class CartService {
+  constructor() {
+
+    // Instância do serviço de e-mail
+    this.mailService = new MailService();
+  }
 
   /**
    * Cria um novo carrinho vazio
-   * @returns {Promise<Object>} Novo carrinho criado
    */
   async createCart() {
     return await CartModel.create({ products: [] });
@@ -26,97 +27,131 @@ class CartService {
 
   /**
    * Busca carrinho por ID com produtos populados
-   * @param {string} id - ID do carrinho
-   * @returns {Promise<Object>} Carrinho com detalhes dos produtos
    */
-  async getCartById(id) {
-    return await CartModel.findById(id).populate('products.product');
+  async getCartById(cartId) {
+    return await CartModel.findById(cartId).populate('products.product');
   }
 
   /**
-   * Adiciona/atualiza produto no carrinho
-   * @param {string} cartId - ID do carrinho
-   * @param {string} productId - ID do produto
-   * @param {number} quantity - Quantidade desejada
-   * @returns {Promise<Object>} Carrinho atualizado
+   * Adiciona ou atualiza produto no carrinho
    */
   async addProductToCart(cartId, productId, quantity) {
     const cart = await CartModel.findById(cartId);
     if (!cart) throw new Error('Carrinho não encontrado');
 
-    // Verifica se produto já está no carrinho
-    const productIndex = cart.products.findIndex(
+    // Verifica se o produto já está no carrinho
+    const existingProductIndex = cart.products.findIndex(
       p => p.product.toString() === productId.toString()
     );
 
-    if (productIndex > -1) {
-      // Atualiza quantidade existente
-      cart.products[productIndex].quantity = quantity;
+    if (existingProductIndex > -1) {
+      // Atualiza quantidade do produto já existente
+      cart.products[existingProductIndex].quantity = quantity;
     } else {
-      // Adiciona novo produto
+      // Adiciona novo produto ao carrinho
       cart.products.push({ product: productId, quantity });
     }
 
     await cart.save();
-    return this.getCartById(cartId); // Retorna carrinho atualizado com produtos populados
+    // Retorna carrinho atualizado com produtos populados
+    return this.getCartById(cartId);
   }
 
   /**
-   * Finaliza a compra do carrinho (processo de checkout)
-   * @param {string} cartId - ID do carrinho
-   * @param {Object} user - Usuário realizando a compra
-   * @returns {Promise<Object>} Resultado com ticket e produtos não comprados
+   * 🔑 LÓGICA CORRIGIDA (antiga finalizePurchase)
+   * Finaliza uma compra, gera o ticket, atualiza o estoque e envia e-mail.
+   * Esta é a função que o teste de unidade `cart.service.test.js` deve testar.
+   * @returns {{ticket: object, productsNotPurchased: string[]}}
    */
   async purchaseCart(cartId, user) {
-    const mailService = new MailService();
-    const cart = await CartModel.findById(cartId);
-    if (!cart) {
-      throw new Error('Carrinho não encontrado');
+    const cart = await this.getCartById(cartId);
+    if (!cart) throw new Error('Carrinho não encontrado');
+
+    let totalAmount = 0;
+    const productsToPurchase = [];
+    const productsNotPurchasedIds = [];
+
+    // Separa produtos com e sem estoque
+    for (const item of cart.products) {
+      const productDetails = await productService.getProductById(item.product._id);
+      if (productDetails.stock >= item.quantity) {
+        totalAmount += item.quantity * productDetails.price;
+        productsToPurchase.push(item);
+      } else {
+        productsNotPurchasedIds.push(item.product._id.toString());
+      }
     }
 
-    const productsToPurchase = []; // Produtos com estoque suficiente
-    const productsNotPurchased = []; // Produtos sem estoque suficiente
-    let totalAmount = 0; // Valor total da compra
+    let ticket = null;
 
-    // Processa cada item do carrinho
+    if (productsToPurchase.length > 0) {
+      // Gera o ticket da compra
+      ticket = await ticketService.createTicket(user.email, totalAmount);
+
+      // Atualiza o estoque dos produtos comprados
+      for (const item of productsToPurchase) {
+        const productDetails = await productService.getProductById(item.product._id);
+        const newStock = productDetails.stock - item.quantity;
+        await productService.updateProduct(item.product._id, { stock: newStock });
+      }
+
+      // Envia e-mail de confirmação
+      await this.mailService.sendPurchaseConfirmation(user.email, ticket);
+    }
+
+    // Atualiza o carrinho, mantendo apenas os produtos que não foram comprados
+    const remainingProducts = cart.products.filter(item => productsNotPurchasedIds.includes(item.product._id.toString()));
+    await CartModel.findByIdAndUpdate(cartId, { products: remainingProducts });
+
+    return {
+      ticket,
+      productsNotPurchased: productsNotPurchasedIds
+    };
+  }
+
+  /**
+   * Finaliza compra após confirmação de pagamento
+   * (executado após webhook Stripe ou confirmação no frontend)
+   */
+  async finalizePurchase(cartId, user) {
+    const cart = await this.getCartById(cartId);
+    if (!cart) throw new Error('Carrinho não encontrado');
+
+    let totalAmount = 0;
+    const productsToPurchase = [];
+    const productsNotPurchased = [];
+
+    // Verifica estoque de cada item
     for (const item of cart.products) {
-      const productData = await productService.getProductById(item.product);
-
-      // Verifica disponibilidade de estoque
-      if (productData && productData.stock >= item.quantity) {
-        // Adiciona ao total e lista de compra
-        totalAmount += item.quantity * productData.price;
-        productsToPurchase.push({ productData, quantity: item.quantity });
+      if (item.product.stock >= item.quantity) {
+        totalAmount += item.quantity * item.product.price;
+        productsToPurchase.push(item);
       } else {
-        // Adiciona à lista de não comprados
         productsNotPurchased.push(item);
       }
     }
 
     let ticket = null;
-    // Se houver produtos para comprar
+
     if (productsToPurchase.length > 0) {
-      // Cria ticket de compra
+      // Gera ticket da compra
       ticket = await ticketService.createTicket(user.email, totalAmount);
 
       // Atualiza estoque dos produtos comprados
       for (const item of productsToPurchase) {
-        const newStock = item.productData.stock - item.quantity;
-        await productService.updateProduct(item.productData.id, { stock: newStock });
+        const newStock = item.product.stock - item.quantity;
+        await productService.updateProduct(item.product._id, { stock: newStock });
       }
 
-      // Envia email de confirmação
-      await mailService.sendPurchaseConfirmation(user.email, ticket);
+      // Envia e-mail de confirmação da compra
+      await this.mailService.sendPurchaseConfirmation(user.email, ticket);
     }
 
-    // Atualiza carrinho mantendo apenas produtos não comprados
-    await CartModel.findByIdAndUpdate(
-      cartId,
-      { products: productsNotPurchased }
-    );
+    // Atualiza carrinho, deixando apenas produtos não comprados
+    await CartModel.findByIdAndUpdate(cartId, { products: productsNotPurchased });
 
     // Retorna IDs dos produtos não comprados
-    const notPurchasedIds = productsNotPurchased.map(item => item.product.toString());
+    const notPurchasedIds = productsNotPurchased.map(item => item.product._id.toString());
 
     return {
       ticket,
@@ -125,10 +160,38 @@ class CartService {
   }
 
   /**
-   * Remove produto do carrinho
-   * @param {string} cartId - ID do carrinho
-   * @param {string} productId - ID do produto
-   * @returns {Promise<Object>} Resultado da operação
+   * Inicia o processo de pagamento criando um PaymentIntent na Stripe.
+   * Esta função deve ser chamada pela rota antes de finalizar a compra.
+   * @returns {Promise<Object>} O PaymentIntent criado.
+   */
+  async createPaymentIntentForCart(cartId, user) {
+    const cart = await this.getCartById(cartId);
+    if (!cart) throw new Error('Carrinho não encontrado');
+
+    let totalAmount = 0;
+    // Calcula o valor total apenas dos produtos com estoque
+    for (const item of cart.products) {
+      if (item.product.stock >= item.quantity) {
+        totalAmount += item.quantity * item.product.price;
+      }
+    }
+
+    if (totalAmount === 0) {
+      throw new Error('Não há produtos com estoque suficiente para a compra.');
+    }
+
+    const amountInCents = Math.round(totalAmount * 100);
+
+    // Usa a instância importada do paymentService
+    return await paymentService.createPaymentIntent(
+      amountInCents,
+      'brl',
+      `Compra no E-commerce por ${user.email}`
+    );
+  }
+
+  /**
+   * Remove produto específico do carrinho
    */
   async removeProductFromCart(cartId, productId) {
     return await CartModel.updateOne(
@@ -139,8 +202,6 @@ class CartService {
 
   /**
    * Limpa todos os produtos do carrinho
-   * @param {string} cartId - ID do carrinho
-   * @returns {Promise<Object>} Resultado da operação
    */
   async clearProductsFromCart(cartId) {
     return await CartModel.updateOne(
@@ -150,42 +211,29 @@ class CartService {
   }
 
   /**
-   * Atualiza quantidade de um produto no carrinho
-   * @param {string} cartId - ID do carrinho
-   * @param {string} productId - ID do produto
-   * @param {number} quantity - Nova quantidade
-   * @returns {Promise<Object>} Resultado da operação
+   * Atualiza quantidade de um produto já presente no carrinho
    */
   async updateProductQuantityInCart(cartId, productId, quantity) {
     return await CartModel.updateOne(
-      {
-        _id: cartId,
-        'products.product': productId
-      },
-      {
-        $set: {
-          'products.$.quantity': quantity
-        }
-      }
+      { _id: cartId, 'products.product': productId },
+      { $set: { 'products.$.quantity': quantity } }
     );
   }
+
   /**
-   * Deleta um carrinho
-   * @param {string} cartId - ID do carrinho
-   * @returns {Promise<Object>} Resultado da operação
+   * Deleta um carrinho pelo ID
    */
   async deleteCart(cartId) {
     return await CartModel.findByIdAndDelete(cartId);
   }
 
   /**
-   * Retorna todos os carrinhos
-   * @returns {Promise<Array>} Lista de carrinhos
+   * Retorna todos os carrinhos existentes
    */
   async getAllCarts() {
     return await CartModel.find().lean();
   }
 }
 
-// Exporta instância singleton do serviço
+// Exporta uma instância única do serviço
 export default new CartService();

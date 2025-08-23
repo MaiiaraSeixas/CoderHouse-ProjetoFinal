@@ -9,7 +9,6 @@
 
   <!-- Estilos CSS da página -->
   <style>
-    /* Estilo geral do corpo da página */
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
@@ -17,7 +16,6 @@
       margin: auto;
     }
 
-    /* Estilo do card de cada produto */
     .card {
       border: 1px solid #ccc;
       padding: 15px;
@@ -28,38 +26,32 @@
       align-items: center;
     }
 
-    /* Estilo da área com informações do produto */
     .card-info {
       flex-grow: 1;
     }
 
-    /* Estilo da área com botões de ação do produto */
     .card-actions {
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
-    /* Remove margem superior do título do produto */
     .card h3 {
       margin-top: 0;
     }
 
-    /* Estilo do total do carrinho */
     .total {
       font-weight: bold;
       margin-top: 20px;
       font-size: 18px;
     }
 
-    /* Estilo do resumo do carrinho */
     .cart-summary {
       margin-top: 20px;
       border-top: 2px solid #333;
       padding-top: 10px;
     }
 
-    /* Estilo geral dos botões */
     .btn {
       padding: 8px 12px;
       border: none;
@@ -72,19 +64,16 @@
       background-color: #ffc107;
     }
 
-    /* Botão de atualizar quantidade */
     .btn-remove {
       background-color: #dc3545;
       color: white;
     }
 
-    /* Botão de remover produto */
     .btn-clear {
       background-color: #6c757d;
       color: white;
     }
 
-    /* Botão de limpar carrinho */
     .btn-purchase {
       background-color: #28a745;
       color: white;
@@ -92,12 +81,17 @@
       padding: 12px 20px;
     }
 
-    /* Botão de finalizar compra */
-
-    /* Estilo do input de quantidade */
     input[type="number"] {
       width: 60px;
       text-align: center;
+    }
+
+    #payment-form {
+      margin-top: 20px;
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
@@ -137,11 +131,23 @@
   </div>
 
   <!-- Resumo do carrinho com total e ações -->
-  <div class="cart-summary">
+  <div class="cart-summary" id="cart-summary">
     <p class="total">Total: R$ {{calculateTotal products}}</p>
-    <button class="btn btn-purchase" onclick="purchaseCart('{{cartId}}')">Finalizar Compra</button>
+    <button class="btn btn-purchase" id="purchase-btn">Finalizar Compra</button>
+
     <button class="btn btn-clear" onclick="clearCart('{{cartId}}')">Limpar Carrinho</button>
   </div>
+  <!-- Formulário de pagamento da Stripe (inicialmente oculto) -->
+  <div id="payment-section" class="hidden">
+    <h3>Pagamento</h3>
+    <form id="payment-form">
+      <div id="payment-element"></div>
+      <button id="submit-payment" class="btn btn-purchase">Pagar</button>
+      <div id="payment-message" role="alert"></div>
+    </form>
+  </div>
+
+
   {{/if}}
 
   <!-- Link para voltar para a página de produtos -->
@@ -149,9 +155,64 @@
   <a href="/products">⬅ Voltar para Produtos</a>
 
   <script>
-    // Função para remover um produto do carrinho
+    // Inicializa o Stripe.js
+
+    const stripe = Stripe('{{stripePublishableKey}}');
+    let elements;
+
+    document.getElementById('purchase-btn').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/carts/{{cartId}}/purchase', { method: 'POST' });
+        const { payload } = await response.json();
+        const clientSecret = payload.client_secret;
+
+        elements = stripe.elements({ clientSecret });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        document.getElementById('cart-summary').classList.add('hidden');
+        document.getElementById('payment-section').classList.remove('hidden');
+      } catch (error) {
+        alert('Erro ao iniciar o pagamento: ' + error.message);
+      }
+    });
+
+    document.getElementById('payment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setLoading(true);
+
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.href.split('?')[0] + '?payment_success=true',
+        },
+      });
+
+      if (error) {
+        showMessage(error.message);
+        setLoading(false);
+      }
+    });
+
+    // Funções de UI
+    function showMessage(messageText) {
+      const messageContainer = document.querySelector('#payment-message');
+      messageContainer.textContent = messageText;
+    }
+
+    function setLoading(isLoading) {
+      const submitBtn = document.querySelector('#submit-payment');
+      if (isLoading) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processando...';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Pagar';
+      }
+    }
     async function removeProduct(cartId, productId) {
-      if (!confirm('Tem a certeza de que quer remover este produto?')) return; // Confirmação do usuário
+      if (!confirm('Tem a certeza de que quer remover este produto?')) return;
+
       try {
         // Requisição DELETE para a API para remover o produto
         const response = await fetch(`/api/carts/${cartId}/product/${productId}`, { method: 'DELETE' });
@@ -202,27 +263,7 @@
       }
     }
 
-    // Função para finalizar a compra
-    async function purchaseCart(cartId) {
-      try {
-        // Requisição POST para a API para processar a compra
-        const response = await fetch(`/api/carts/${cartId}/purchase`, { method: 'POST' });
-        const result = await response.json();
 
-        if (!response.ok) {
-          let errorMessage = result.message || 'Não foi possível processar a compra.';
-          if (result.productsNotPurchased && result.productsNotPurchased.length > 0) {
-            errorMessage += `\nIDs dos produtos sem estoque: ${result.productsNotPurchased.join(', ')}`;
-          }
-          throw new Error(errorMessage);
-        }
-
-        alert(`Compra finalizada com sucesso!\nTicket: ${result.payload.code}\nValor: R$ ${result.payload.amount}`);
-        window.location.reload();
-      } catch (err) {
-        alert(`Erro na compra: ${err.message}`);
-      }
-    }
   </script>
 </body>
 

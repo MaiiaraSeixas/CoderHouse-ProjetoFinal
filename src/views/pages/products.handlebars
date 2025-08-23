@@ -1,14 +1,29 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <title>Lista de Produtos</title>
   <style>
-    .product-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    .pagination a, .pagination span { margin-right: 5px; padding: 5px; border: 1px solid #eee; }
-    .pagination .current { font-weight: bold; }
+    .product-item {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .pagination a,
+    .pagination span {
+      margin-right: 5px;
+      padding: 5px;
+      border: 1px solid #eee;
+    }
+
+    .pagination .current {
+      font-weight: bold;
+    }
   </style>
 </head>
+
 <body>
   <h1>Lista de Produtos</h1>
 
@@ -16,9 +31,27 @@
   <div class="user-info">
     <p>👋 Bem-vindo, {{user.first_name}}! Você está logado como <strong>{{user.role}}</strong>.</p>
     <p>
-    <a href="/cart">🛒 Meu Carrinho</a>
-    <a href="/api/sessions/logout">Sair</a>
+      <a href="/cart">🛒 Meu Carrinho</a>
+      <a href="/api/sessions/logout">Sair</a>
     </p>
+    {{#if (eq user.role "user")}}
+    <div class="premium-section">
+      <hr>
+      <h4>Torne-se Premium</h4>
+      <p>Envie seus documentos para atualizar sua conta para premium.</p>
+      <form id="upload-form" action="/api/users/{{user._id}}/documents" method="post" enctype="multipart/form-data">
+        <label for="documents">Selecione os documentos (Identificação, Comprovante de endereço, Comprovante de estado de
+          conta):</label>
+        <br>
+        <input type="file" id="documents" name="document" multiple required>
+        <br><br>
+        <button type="submit">Enviar Documentos</button>
+      </form>
+      <br>
+      <button id="upgrade-premium-btn">Tornar-se Premium</button>
+      <p id="premium-message"></p>
+    </div>
+    {{/if}}
   </div>
   {{/if}}
 
@@ -31,9 +64,9 @@
       <p>Categoria: {{this.category}}</p>
       <div class="product-actions">
         {{#if (gt this.stock 0)}}
-          <button onclick="adicionarAoCarrinho('{{this.id}}')">Adicionar ao Carrinho</button>
+        <button onclick="adicionarAoCarrinho('{{this.id}}')">Adicionar ao Carrinho</button>
         {{else}}
-          <span style="color: red">Produto esgotado</span>
+        <span style="color: red">Produto esgotado</span>
         {{/if}}
         <a href="/products/{{this.id}}/view">Ver Detalhes</a>
       </div>
@@ -45,11 +78,11 @@
 
   <div class="pagination">
     {{#if prevLink}}
-      <a href="{{prevLink}}">Página Anterior</a>
+    <a href="{{prevLink}}">Página Anterior</a>
     {{/if}}
     <span class="current-page">Página {{currentPage}} de {{totalPages}}</span>
     {{#if nextLink}}
-      <a href="{{nextLink}}">Próxima Página</a>
+    <a href="{{nextLink}}">Próxima Página</a>
     {{/if}}
   </div>
 
@@ -81,6 +114,32 @@
         alert(`Erro: ${err.message}`);
       }
     }
+    // Script para upgrade para premium
+    const upgradeBtn = document.getElementById('upgrade-premium-btn');
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', async () => {
+        const userId = '{{user._id}}';
+        const messageEl = document.getElementById('premium-message');
+        try {
+          const response = await fetch(`/api/users/premium/${userId}`, {
+            method: 'PUT'
+          });
+          const data = await response.json();
+          if (response.ok) {
+            messageEl.style.color = 'green';
+            messageEl.textContent = 'Parabéns! Você agora é um usuário Premium. A página será recarregada.';
+            setTimeout(() => window.location.reload(), 3000);
+          } else {
+            throw new Error(data.error || 'Falha ao tentar o upgrade.');
+          }
+        } catch (error) {
+          messageEl.style.color = 'red';
+          messageEl.textContent = `Erro: ${error.message}`;
+        }
+      });
+    }
+
   </script>
 </body>
+
 </html>

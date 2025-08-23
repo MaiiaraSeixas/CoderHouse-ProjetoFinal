@@ -16,11 +16,7 @@ router.get('/', async (req, res) => {
 
         // Prepara os dados do utilizador para a view
         const cartId = req.user?.cartId || null;
-        const user = req.user ? {
-            first_name: req.user.first_name,
-            role: req.user.role,
-            cartId: cartId
-        } : null;
+        const user = req.user;
 
         // Prepara os links de paginação com todos os parâmetros
         const { limit, sort, query } = req.query;

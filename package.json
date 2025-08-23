@@ -8,7 +8,7 @@
     "start": "node src/app.js",
     "dev": "NODE_ENV=development npx nodemon src/server.js",
     "prod": "NODE_ENV=production node src/app.js",
-    "tests": "mocha -r dotenv/config --file src/tests/test-setup.js src/tests/**/*.test.js"
+    "tests": "cross-env NODE_ENV=test mocha -r dotenv/config --file src/tests/test-setup.js src/tests/**/*.test.js"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.1",
@@ -30,6 +30,7 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "socket.io": "^4.7.5",
+    "stripe": "^18.4.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "twilio": "^5.0.4",
@@ -39,7 +40,9 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "chai": "^5.1.1",
+    "cross-env": "^10.0.0",
     "mocha": "^10.4.0",
+    "mongodb-memory-server": "^10.2.0",
     "sinon": "^21.0.0",
     "supertest": "^7.0.0"
   }

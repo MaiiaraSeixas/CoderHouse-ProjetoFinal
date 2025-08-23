@@ -4,6 +4,7 @@ import passport from 'passport';
 import { generateToken } from '../utils/jwt.js';
 import CartModel from '../models/cart.model.js';
 import UserDTO from '../dtos/UserDTO.js';
+import userDAO from '../daos/mongo/user.dao.js';
 
 const router = Router();
 
@@ -161,8 +162,12 @@ router.get(
 
 // =============== ROTA DE LOGOUT ===============
 
-router.get('/logout', (req, res) => {
+router.get('/logout', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
+    // Atualiza a última conexão do usuário
+    if (req.user) {
+      await userDAO.updateUser(req.user._id, { last_connection: new Date() });
+    }
     // Remove cookie de autenticação
     res.clearCookie('jwtCookieToken', {
       httpOnly: true,
@@ -170,15 +175,26 @@ router.get('/logout', (req, res) => {
       sameSite: 'Strict',
     });
 
-    // Comportamento diferenciado para HTML vs API
-    if (req.accepts('html')) {
-      req.logout(() => res.redirect('/login'));
-    } else {
-      res.sendSuccess('Logout realizado com sucesso');
-    }
+    // Destrói a sessão para limpar os dados do usuário
+    req.session.destroy(err => {
+      if (err) {
+        console.error('Falha ao destruir a sessão:', err);
+        // Mesmo com erro na destruição da sessão, o logout deve continuar
+      }
+
+      // Responde ao cliente
+      if (req.accepts('html')) {
+        res.redirect('/login');
+      } else {
+        res.sendSuccess('Logout realizado com sucesso');
+      }
+    }); // <-- Fecha o callback de req.session.destroy
   } catch (e) {
     console.error('[LOGOUT ERROR]', e);
-    res.status(500).json({ status: 'error', error: 'Erro durante logout' });
+    // Evita enviar resposta duas vezes
+    if (!res.headersSent) {
+      res.status(500).json({ status: 'error', error: 'Erro durante logout' });
+    }
   }
 });
 

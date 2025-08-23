@@ -65,7 +65,8 @@ const hbs = exphbs.create({
     multiply: (a, b) => a * b,
     calculateTotal: (products) =>
       products.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2),
-    gt: (a, b) => a > b
+    gt: (a, b) => a > b,
+    eq: (a, b) => a === b
   }
 });
 app.engine('handlebars', hbs.engine);

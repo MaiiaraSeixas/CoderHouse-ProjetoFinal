@@ -47,45 +47,60 @@ class UserService {
    * @throws {Error} Em caso de falha na transação
    */
   async createUser(userData) {
-    const session = await UserModel.startSession();
-    session.startTransaction();
+    // Adicionamos a condição para verificar o ambiente
+    if (process.env.NODE_ENV !== 'test') {
+      // --- LÓGICA ORIGINAL COM TRANSAÇÃO (PARA PRODUÇÃO/DESENVOLVIMENTO) ---
+      const session = await UserModel.startSession();
+      session.startTransaction();
 
-    try {
-      // Cria versão hash da senha
-      const hashedUserData = {
-        ...userData,
-        password: createHash(userData.password)
-      };
+      try {
+        const hashedUserData = {
+          ...userData,
+          password: createHash(userData.password)
+        };
+        const newUser = await UserModel.create([hashedUserData], { session });
+        const newCart = await CartModel.create(
+          [{ user: newUser[0]._id, products: [] }],
+          { session }
+        );
+        const updatedUser = await UserModel.findByIdAndUpdate(
+          newUser[0]._id,
+          { $set: { cartId: newCart[0]._id } },
+          { new: true, session }
+        ).lean();
+        await session.commitTransaction();
+        return updatedUser;
+      } catch (error) {
+        await session.abortTransaction();
+        throw new Error('Falha ao criar usuário: ' + error.message);
+      } finally {
+        session.endSession();
+      }
+    } else {
+      // --- LÓGICA ALTERNATIVA SEM TRANSAÇÃO (APENAS PARA TESTES) ---
+      try {
+        const hashedUserData = {
+          ...userData,
+          password: createHash(userData.password)
+        };
+        // Cria usuário e carrinho em passos separados
+        const newUserDoc = new UserModel(hashedUserData);
+        const newUser = await newUserDoc.save();
 
-      // Cria usuário na transação
-      const newUser = await UserModel.create([hashedUserData], { session });
+        const newCart = await CartModel.create({ user: newUser._id, products: [] });
 
-      // Cria carrinho associado ao usuário
-      const newCart = await CartModel.create(
-        [{ user: newUser[0]._id, products: [] }],
-        { session }
-      );
+        // Atualiza o usuário com o ID do carrinho
+        newUser.cartId = newCart._id;
+        const updatedUser = await newUser.save();
 
-      // Atualiza usuário com ID do carrinho
-      const updatedUser = await UserModel.findByIdAndUpdate(
-        newUser[0]._id,
-        { $set: { cartId: newCart[0]._id } },
-        { new: true, session }
-      ).lean();
-
-      // Confirma transação
-      await session.commitTransaction();
-      return updatedUser;
-    } catch (error) {
-      // Reverte transação em caso de erro
-      await session.abortTransaction();
-      throw new Error('Falha ao criar usuário: ' + error.message);
-    } finally {
-      // Finaliza sessão independente do resultado
-      session.endSession();
+        // Retorna um objeto "lean" para manter a consistência com a outra branch
+        return updatedUser.toObject();
+      } catch (error) {
+        // Não há transação para abortar, apenas lançamos o erro
+        throw new Error('Falha ao criar usuário (ambiente de teste): ' + error.message);
+      }
     }
   }
-
   /**
    * Retorna todos os usuários
    * @returns {Promise<Array>} Lista de usuários
