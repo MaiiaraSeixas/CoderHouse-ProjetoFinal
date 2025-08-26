@@ -19,19 +19,21 @@ class CartController {
 				});
 			}
 
-			// 🔧 Correção: garante que o serviço lance erro quando carrinho não existe
+			// Garante que o serviço lance erro quando carrinho não existe
 			const cart = await cartService.getCartById(cid);
 			if (!cart) {
 				return res.status(404).send({ status: 'error', message: 'Carrinho não encontrado' });
 			}
 
-			// O serviço agora retorna os dados do PaymentIntent, incluindo client_secret
-			const paymentIntent = await cartService.purchaseCart(cid, user);
+			// 🔧 CORREÇÃO LÓGICA: Chamando o método correto para criar a intenção de pagamento.
+			// O método `purchaseCart` foi renomeado/refatorado para `createPaymentIntentForCart`.
+			const paymentIntentInfo = await cartService.createPaymentIntentForCart(cid, user);
 
-			// 🔧 Retorno compatível com o teste de integração
+
+			// Retorno compatível com o teste de integração
 			res.sendSuccess({
 				message: 'Intenção de pagamento criada com sucesso.',
-				payload: { client_secret: paymentIntent.client_secret }
+				payload: paymentIntentInfo // Este objeto já contém o client_secret
 			});
 
 		} catch (error) {

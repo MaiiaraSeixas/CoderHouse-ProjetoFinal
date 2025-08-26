@@ -7,7 +7,7 @@ import config from '../config/config.js';
  * Serviço para interagir com a API de pagamentos da Stripe.
  * Responsável por criar PaymentIntents e gerenciar transações.
  */
-class PaymentService {
+export class PaymentService {
   /**
    * Inicializa o cliente Stripe com a chave secreta.
    * 🔒 A chave secreta deve estar armazenada no arquivo de configuração.
@@ -23,7 +23,7 @@ class PaymentService {
    * @param {string} description - Descrição da transação.
    * @returns {Promise<object>} O objeto PaymentIntent criado.
    */
-  async createPaymentIntent(amount, currency, description) {
+  async createPaymentIntent({amount, currency, description}) {
     // 🔹 Validações básicas dos parâmetros de entrada
     if (!amount || amount <= 0) {
       throw new Error('O valor do pagamento deve ser maior que zero.');

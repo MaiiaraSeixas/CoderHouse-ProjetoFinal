@@ -18,5 +18,15 @@ export function createHash(password) {
  * @returns {boolean} true se a senha for válida
  */
 export function isValidPassword(password, hashedPassword) {
-  return bcrypt.compareSync(password, hashedPassword);
+  // Adiciona uma verificação para garantir que ambos os argumentos são strings válidas.
+  // Se não forem, bcrypt.compareSync lançaria um erro. Em vez disso, retornamos false.
+  if (!password || typeof password !== 'string' || !hashedPassword || typeof hashedPassword !== 'string') {
+    return false;
+  }
+  try {
+    return bcrypt.compareSync(password, hashedPassword);
+  } catch (error) {
+    // Se bcrypt ainda lançar um erro (por exemplo, hash malformado), capturamos e retornamos false.
+    return false;
+  }
 }
